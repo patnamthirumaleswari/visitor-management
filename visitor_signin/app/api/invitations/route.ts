@@ -1,8 +1,9 @@
 import QRCode from "qrcode";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { publicBaseUrl } from "@/lib/baseUrl";
 import { LOCATION, VISITOR_TYPES } from "@/lib/config";
-import { formatDay, todayAtLocation } from "@/lib/dates";
+import { todayAtLocation } from "@/lib/dates";
 import { newId, normalizePhone, write, type Invitation, type Visit, type Visitor } from "@/lib/db";
 import { notifyVisitorInvited } from "@/lib/notify";
 import { randomToken } from "@/lib/token";
@@ -23,8 +24,11 @@ const clean = (v: unknown, max = 120) => (typeof v === "string" ? v.trim().slice
 
 // Host pre-registers a visitor (FR-PRE-01). Creates an "expected" visit plus an invitation
 // whose link/QR the visitor opens on their phone.
-// TODO before any real deployment: only a signed-in host or admin may call this (NFR-SEC-03).
+// Only logged-in hosts, reception and admins (NFR-SEC-03). A host can only invite for themselves.
 export async function POST(req: Request) {
+  const staff = await requireStaffApi(ACCESS.preRegister);
+  if (staff instanceof NextResponse) return staff;
+
   let body: Body;
   try {
     body = await req.json();
@@ -38,6 +42,7 @@ export async function POST(req: Request) {
   const company = clean(body.company);
   const visitDate = clean(body.visitDate, 10);
   const type = VISITOR_TYPES.find((t) => t.id === body.visitorType);
+  const hostId = staff.role === "host" ? staff.hostId : body.hostId;
 
   if (name.length < 2) return bad("Enter the visitor's full name.");
   if (phone.replace(/\D/g, "").length < 8) return bad("Enter a valid mobile number.");
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
   if (visitDate < todayAtLocation()) return bad("The visit date can't be in the past.");
 
   const result = write((d) => {
-    const host = d.hosts.find((h) => h.id === body.hostId);
+    const host = d.hosts.find((h) => h.id === hostId);
     if (!host) return null;
 
     let visitor = d.visitors.find((v) => v.phone === phone);
@@ -80,16 +85,14 @@ export async function POST(req: Request) {
     };
     d.visits.push(visit);
     d.invitations.push(invitation);
-    return { visitor, host, invitation };
+    return { visitor, host, visit, invitation };
   });
 
   if (!result) return bad("Choose the host.");
 
   const inviteUrl = `${publicBaseUrl()}/invite/${result.invitation.qrToken}`;
   const qr = await QRCode.toDataURL(inviteUrl, { margin: 1, width: 400, errorCorrectionLevel: "M" });
-  notifyVisitorInvited(result.visitor, result.host, inviteUrl, formatDay(visitDate)).catch((e) =>
-    console.error("[notify] failed", e),
-  );
+  after(() => notifyVisitorInvited(result.visitor, result.host, result.visit, inviteUrl));
 
   return NextResponse.json({ inviteUrl, qr }, { status: 201 });
 }

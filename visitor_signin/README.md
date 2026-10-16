@@ -36,6 +36,7 @@ On arrival: scans the reception QR  ->  "Welcome Ravi, Priya is expecting you"  
   normal walk-in form. Phones that opened the invite link earlier skip the question.
 - Scanning uses the live camera on HTTPS/localhost. On plain HTTP (office Wi-Fi in dev) browsers block
   live camera access, so the visitor takes a photo of the QR instead, decoded with `jsqr`.
+  **Upload QR image** also accepts a screenshot from the gallery, for invites received on the same phone.
 - If they never opened the link, typing their invited mobile number in the form finds today's invitation.
 - An invitation works only on its visit date, only once, and only after scanning the reception QR
   (so it still proves the visitor is on site).
@@ -50,9 +51,44 @@ reception can recognise the visitor.
 | `/kiosk` | Tablet/TV at reception |
 | `/visit` | Visitor's phone (after scanning) |
 | `/badge/<id>?t=...` | Visitor's phone: badge and sign-out |
-| `/pre-register` | Host: invite a visitor |
+| `/login` | Staff: log in (sends each role to its own page) |
+| `/pre-register` | Host, reception, admin: invite a visitor |
 | `/invite/<code>` | Visitor's phone: their invitation |
-| `/admin` | Reception: who is on site, who is expected, manual sign-out |
+| `/admin` | Reception, admin: who is on site, who is expected, manual sign-out |
+| `/account` | Hosts: choose email, SMS or both for arrival messages |
+| `/security` | Security, reception, admin: printable evacuation list of everyone on site |
+
+## Notifications (FR-NOT-01/02/06, FR-PRE-02)
+
+| When | Who gets it | How |
+|---|---|---|
+| A visitor signs in | Their host | Email, SMS or both, as the host chose on `/account`. The email has the visitor's name, company, type, phone, photo, time and location |
+| A host pre-registers someone | The visitor | Email with the invite link, date, host, address and a map link. SMS with the link if no email was given |
+
+- Messages are sent after the sign-in response, using Next.js `after()`, so the visitor never waits.
+  Each provider call times out after 5 seconds (NFR-PER-02).
+- Email uses SendGrid and SMS uses Twilio, called with `fetch` (`lib/channels.ts`), so no extra package is needed.
+  Put the keys in `.env.local` (see `.env.example`). **Without keys, messages are printed in the terminal
+  running `npm run dev`** and recorded as "logged only".
+- Every attempt is saved in `notifications` in `data/db.json` with its status: sent, logged or failed (with the error).
+  `/admin` shows it under the host's name, for example "Email sent · SMS failed".
+
+## Staff login (NFR-SEC-02/03)
+
+Based on the staff login from the Vite client (`client/src/login/`), moved to the server:
+passwords are stored as scrypt hashes in `data/db.json` and checked in `/api/auth/login`, which sets an
+httpOnly cookie valid for 8 hours. Every staff page and API checks the role again on each request
+(`lib/auth.ts`, `ACCESS`).
+
+| Username | Password | Role | Lands on | Can open |
+|---|---|---|---|---|
+| `admin` | `admin123` | Admin | `/admin` | everything |
+| `reception` | `reception123` | Receptionist | `/admin` | everything |
+| `host` | `host123` | Host (Priya Nair) | `/pre-register` | pre-register, only for themselves |
+| `security` | `security123` | Security | `/security` | evacuation list |
+
+These starting accounts are added to `data/db.json` the first time the app runs. Change them before
+anyone else can reach the app.
 
 ## Run it
 
@@ -75,8 +111,9 @@ If the phone can't load the page, allow Node through Windows Firewall on private
 ## Prototype shortcuts to replace before production
 
 - `lib/db.ts` stores everything in `data/db.json`. Swap for PostgreSQL (Prisma/Drizzle).
-- `lib/notify.ts` logs host notifications and visitor invitations to the console. Plug in SendGrid / Twilio via a job queue.
-- `/admin`, `/api/admin/*`, `/pre-register` and `POST /api/invitations` have **no login**. Add auth + RBAC (NFR-SEC-03) and audit logging (FR-ROLE-02).
+- Notifications are sent from the web server once, with no retry. Move them to a job queue with retries.
+- Staff accounts are seeded, not managed: add an employee screen (FR-ADM-04), MFA (NFR-SEC-02) and audit logging (FR-ROLE-02).
+- Login has no rate limit yet; add one before going online.
 - Photos and signatures are stored as data URLs. Move to S3 with encryption at rest (NFR-SEC-01).
 - Set a strong `APP_SECRET` and serve over HTTPS.
 - Single location and hard-coded visitor types in `lib/config.ts`; these become admin-managed tables.

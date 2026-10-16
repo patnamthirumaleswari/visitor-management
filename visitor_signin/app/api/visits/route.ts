@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AGREEMENT, VISITOR_TYPES, type VisitorTypeConfig } from "@/lib/config";
 import { newId, normalizePhone, write, type Host, type Visit, type Visitor } from "@/lib/db";
@@ -143,8 +143,8 @@ function agreementFields(type: VisitorTypeConfig, body: Body) {
 async function finish({ host, visitor, visit }: { host: Host; visitor: Visitor; visit: Visit }) {
   (await cookies()).delete(SESSION_COOKIE);
 
-  // Don't make the visitor wait on email/SMS delivery.
-  notifyHost(host, visitor, visit).catch((e) => console.error("[notify] failed", e));
+  // Runs after the response is sent, so the visitor never waits on email/SMS delivery.
+  after(() => notifyHost(host, visitor, visit));
 
   return NextResponse.json({ id: visit.id, badgeToken: visit.badgeToken }, { status: 201 });
 }

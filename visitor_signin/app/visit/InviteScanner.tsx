@@ -14,6 +14,7 @@ export default function InviteScanner({ onDetected }: { onDetected: (text: strin
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<HTMLInputElement>(null);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
 
@@ -66,29 +67,41 @@ export default function InviteScanner({ onDetected }: { onDetected: (text: strin
     };
   }, [mode]);
 
-  const onFile = async (file: File | undefined) => {
+  const onFile = async (input: HTMLInputElement) => {
+    const file = input.files?.[0];
     if (!file) return;
     setError(null);
     const text = await decodePhoto(file);
-    if (inputRef.current) inputRef.current.value = ""; // let the same photo be picked again
+    input.value = ""; // let the same image be picked again
     if (text) onDetectedRef.current(text);
-    else setError("We couldn't find a QR code in that photo. Hold the phone closer so the code fills most of the picture.");
+    else setError("We couldn't find a QR code in that image. Make sure the code is clear and fills most of the picture.");
   };
+
+  // No `capture` attribute, so phones offer the gallery/files, e.g. a screenshot of the invite.
+  const upload = (
+    <>
+      <input ref={uploadRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.currentTarget)} />
+      <button className="secondary" onClick={() => uploadRef.current?.click()} disabled={!mode}>Upload QR image</button>
+    </>
+  );
 
   if (mode === "live") {
     return (
       <>
         <video ref={videoRef} className="scanner" muted playsInline aria-label="Camera view for scanning your invitation" />
-        <p className="muted small">Point the camera at the QR code in your invitation.</p>
+        <p className="muted small">Point the camera at the QR code in your invitation, or upload a screenshot of it.</p>
+        {upload}
+        {error && <p className="error" role="alert">{error}</p>}
       </>
     );
   }
 
   return (
     <>
-      <p className="muted">Take a photo of the QR code in your invitation email or message.</p>
-      <input ref={inputRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.target.files?.[0])} />
+      <p className="muted">Take a photo of the QR code in your invitation, or upload a screenshot of it.</p>
+      <input ref={inputRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.currentTarget)} />
       <button onClick={() => inputRef.current?.click()} disabled={!mode}>Open camera</button>
+      {upload}
       {error && <p className="error" role="alert">{error}</p>}
     </>
   );

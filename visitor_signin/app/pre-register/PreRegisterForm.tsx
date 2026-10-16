@@ -11,10 +11,12 @@ import { formatDay } from "@/lib/dates";
 type HostOption = { id: string; name: string; department: string };
 type Props = { hosts: HostOption[]; visitorTypes: VisitorTypeConfig[]; today: string };
 
-const EMPTY_FORM = { visitorName: "", phone: "", email: "", company: "", visitorType: "guest", hostId: "" };
+const EMPTY_FORM = { visitorName: "", phone: "", email: "", company: "", visitorType: "guest" };
 
 export default function PreRegisterForm({ hosts, visitorTypes, today }: Props) {
-  const [form, setForm] = useState({ ...EMPTY_FORM, visitDate: today });
+  // A host account gets a list with only themselves, so pick it for them.
+  const defaultHostId = hosts.length === 1 ? hosts[0].id : "";
+  const [form, setForm] = useState({ ...EMPTY_FORM, hostId: defaultHostId, visitDate: today });
   const [result, setResult] = useState<{ inviteUrl: string; qr: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function PreRegisterForm({ hosts, visitorTypes, today }: Props) {
 
   function registerAnother() {
     setResult(null);
-    setForm({ ...EMPTY_FORM, visitDate: today });
+    setForm({ ...EMPTY_FORM, hostId: defaultHostId, visitDate: today });
   }
 
   if (result) {
@@ -120,8 +122,8 @@ export default function PreRegisterForm({ hosts, visitorTypes, today }: Props) {
           </div>
           <div>
             <label htmlFor="hostId">Host</label>
-            <select id="hostId" name="hostId" value={form.hostId} onChange={handleChange} required>
-              <option value="">-- Select host --</option>
+            <select id="hostId" name="hostId" value={form.hostId} onChange={handleChange} required disabled={hosts.length === 1}>
+              {hosts.length > 1 && <option value="">-- Select host --</option>}
               {hosts.map((h) => <option key={h.id} value={h.id}>{h.name} · {h.department}</option>)}
             </select>
           </div>

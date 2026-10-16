@@ -113,3 +113,18 @@ th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color
 td img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
 td button { width: auto; min-height: 36px; padding: 6px 12px; }
 .table-wrap { overflow-x: auto; }
+
+/* Staff top bar */
+.staffbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--border); }
+.staffbar-links { display: flex; flex-wrap: wrap; gap: 16px; }
+.staffbar-links a { font-weight: 600; text-decoration: none; }
+.staffbar-user { display: flex; align-items: center; gap: 12px; }
+.staffbar-user button { width: auto; min-height: 36px; padding: 6px 12px; }
+
+@media print {
+  .staffbar, .no-print { display: none !important; }
+}
+
+/* Checkbox rows */
+label.check { display: flex; align-items: center; gap: 12px; font-weight: 400; font-size: 1rem; margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+label.check input { width: 20px; height: 20px; flex: none; }

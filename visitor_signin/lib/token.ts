@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 
 const SECRET = process.env.APP_SECRET || "dev-only-secret-change-me";
 
-export type TokenKind = "qr" | "session";
+export type TokenKind = "qr" | "session" | "staff";
 
 export type TokenPayload = {
   k: TokenKind; // what the token is for

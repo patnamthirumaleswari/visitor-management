@@ -278,7 +278,9 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
 
         {error && <p className="error" role="alert">{error}</p>}
 
-        {step !== "type" && step !== "invite" && (
+        {/* Not on the first step of either path ("type"/"invite"), nor on "welcome"/"scan" (index -1),
+            which have their own buttons. */}
+        {stepIndex > 0 && (
           <div className="row">
             <button className="secondary" onClick={back} disabled={submitting}>Back</button>
             <button onClick={next} disabled={!canContinue || submitting}>

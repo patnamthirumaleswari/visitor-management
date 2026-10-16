@@ -6,6 +6,7 @@ export const LOCATION = {
   name: "Head Office",
   company: "Acme Pvt Ltd",
   timezone: "Asia/Kolkata", // decides what "today" means for invitations
+  address: "4th Floor, Example Tech Park, Hitech City, Hyderabad 500081", // shown in invitations (FR-PRE-02)
   welcomeText: "Welcome! Scan to sign in on your phone",
 };
 

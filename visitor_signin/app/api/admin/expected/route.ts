@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { todayAtLocation } from "@/lib/dates";
+import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { read } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 // Pre-registered visitors due today who haven't arrived yet.
-// TODO before any real deployment: require an authenticated admin (NFR-SEC-03).
+// Admin and reception only (NFR-SEC-03).
 export async function GET() {
+  const staff = await requireStaffApi(ACCESS.admin);
+  if (staff instanceof NextResponse) return staff;
+
   const today = todayAtLocation();
   const expected = read((d) =>
     d.visits
