@@ -24,7 +24,7 @@ export default function StaffBar({ name, role, roleLabel, isHost }: Props) {
         {LINKS.filter((l) => l.roles.includes(role)).map((l) => (
           <a key={l.href} href={l.href}>{l.label}</a>
         ))}
-        {isHost && <a href="/account">My notifications</a>}
+        {isHost && <a href="/account">My account</a>}
       </div>
       <div className="staffbar-user">
         <span><strong>{name}</strong> <span className="muted small">· {roleLabel}</span></span>

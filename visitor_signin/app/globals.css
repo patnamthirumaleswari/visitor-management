@@ -130,3 +130,8 @@ td button { width: auto; min-height: 36px; padding: 6px 12px; }
 /* Checkbox rows */
 label.check { display: flex; align-items: center; gap: 12px; font-weight: 400; font-size: 1rem; margin: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
 label.check input { width: 20px; height: 20px; flex: none; }
+
+/* Employee sign-in on the reception screen */
+/* Pinned to the corner so it's visible on any screen size without scrolling */
+.kiosk-staff-link { position: fixed; top: 16px; right: 16px; width: auto; min-height: 44px; font-size: 1rem; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
+.pin-input { font-size: 2rem; letter-spacing: 0.5em; text-align: center; }

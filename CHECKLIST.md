@@ -69,7 +69,7 @@ The code in brackets, like `KIO-10`, is the requirement ID in the PDF, if you wa
 - [ ] The host gets it within 5 seconds of sign-in (`NFR-PER-02`)
 
 **Staff at reception**
-- [ ] Employees sign in/out at reception with name, PIN or personal QR (`EMP-01`)
+- [x] Employees sign in/out at reception with name, PIN or personal QR (`EMP-01`)
 
 ---
 

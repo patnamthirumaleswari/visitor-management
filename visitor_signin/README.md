@@ -56,7 +56,8 @@ reception can recognise the visitor.
 | `/pre-register` | Host, reception, admin: invite a visitor |
 | `/invite/<code>` | Visitor's phone: their invitation |
 | `/admin` | Reception, admin: who is on site, who is expected, manual sign-out |
-| `/account` | Hosts: choose email, SMS or both for arrival messages |
+| `/kiosk/staff` | Reception screen: employees sign in/out with name + PIN or their personal QR |
+| `/account` | Employees: personal sign-in QR, change PIN, choose email/SMS for arrival messages |
 | `/security` | Security, reception, admin: printable evacuation list of everyone on site |
 
 ## Notifications (FR-NOT-01/02/06, FR-PRE-02)
@@ -73,6 +74,24 @@ reception can recognise the visitor.
   running `npm run dev`** and recorded as "logged only".
 - Every attempt is saved in `notifications` in `data/db.json` with its status: sent, logged or failed (with the error).
   `/admin` shows it under the host's name, for example "Email sent · SMS failed".
+
+## Employee sign-in at reception (FR-EMP-01)
+
+```
+Reception screen (/kiosk)  ->  "Employee? Sign in or out here"  ->  /kiosk/staff
+   type your name -> pick it -> type your PIN        (or)        show your personal QR to the camera
+   -> "Welcome, Anita. You signed in at 09:02"   /   the same steps later: "Goodbye, Anita"
+```
+
+- The same steps sign you in or out: if you're in, it signs you out.
+- **PIN:** every employee starts with PIN `1234`. Change it on `/account` (4 to 6 digits; easy ones like
+  `1234` or `0000` are refused). PINs are stored hashed. Five wrong PINs in a row lock the PIN for 5 minutes.
+- **Personal QR:** shown on `/account`. Screenshot or print it. "Make a new QR code" replaces it and the old
+  one stops working. Scanning it again within 60 seconds doesn't sign you straight back out.
+- The name search only returns name and department, because the screen is in a public area.
+- `/admin` lists employees on site and can sign them out. `/security` includes them on the evacuation list.
+- To log in to `/account` an employee needs a staff account linked to their record. Only Priya Nair
+  (`host` / `host123`) has one so far; the employee list (FR-ADM-04) will add the rest.
 
 ## Staff login (NFR-SEC-02/03)
 
