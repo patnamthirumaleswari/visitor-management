@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
+import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { read } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const staff = await requireStaffApi(ACCESS.onsiteList);
   if (staff instanceof NextResponse) return staff;
+  sweepAutoSignOut(); // so nobody past the end-of-day cut-off shows as on site
 
   const onsite = read((d) =>
     d.visits

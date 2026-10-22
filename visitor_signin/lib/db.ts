@@ -38,6 +38,9 @@ export type Visit = {
   expectedDate?: string; // YYYY-MM-DD, for pre-registered visits
   signedInAt?: string;
   signedOutAt?: string;
+  // How they signed out (FR-KIO-10): badge on their phone, reception screen, staff portal, or the
+  // automatic end-of-day sign-out. Missing on visits signed out before this was recorded.
+  signedOutBy?: "badge" | "kiosk" | "portal" | "auto";
   badgeToken: string;
   agreementVersion?: string;
   signature?: string; // data URL of the finger signature

@@ -43,9 +43,9 @@ The code in brackets, like `KIO-10`, is the requirement ID in the PDF, if you wa
 
 **Signing out**
 - [x] Sign out from the badge on the phone
-- [ ] Sign out by searching your name at reception (`KIO-10`)
-- [ ] Sign out by scanning the badge QR (`KIO-10`)
-- [ ] Everyone still signed in is signed out automatically at a set time (`KIO-10`)
+- [x] Sign out by searching your name at reception (`KIO-10`)
+- [x] Sign out by scanning the badge QR (`KIO-10`)
+- [x] Everyone still signed in is signed out automatically at a set time (`KIO-10`)
 
 **Agreements (NDA, safety rules)**
 - [x] Visitor signs with a finger (`DOC-02`)

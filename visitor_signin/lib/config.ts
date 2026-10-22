@@ -35,6 +35,10 @@ export const AGREEMENT = {
   ],
 };
 
+// Anyone still signed in is signed out automatically at this local time (FR-KIO-10), e.g. visitors
+// who left without signing out. Set to null to turn it off.
+export const AUTO_SIGNOUT_TIME: string | null = "20:00";
+
 // The kiosk QR changes every QR_ROTATE_SECONDS; each code stays valid for QR_TTL_SECONDS,
 // so a photo of the code shared outside the building stops working within ~90 s.
 export const QR_ROTATE_SECONDS = 30;

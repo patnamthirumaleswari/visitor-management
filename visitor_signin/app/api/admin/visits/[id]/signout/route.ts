@@ -16,6 +16,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     if (visit.status === "signed_in") {
       visit.status = "signed_out";
       visit.signedOutAt = new Date().toISOString();
+      visit.signedOutBy = "portal";
     }
     return true;
   });

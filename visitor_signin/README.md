@@ -49,6 +49,7 @@ reception can recognise the visitor.
 | Page | Who uses it |
 |---|---|
 | `/kiosk` | Tablet/TV at reception |
+| `/kiosk/signout` | Reception screen: visitors sign out by name or by scanning their badge QR |
 | `/visit` | Visitor's phone (after scanning) |
 | `/badge/<id>?t=...` | Visitor's phone: badge and sign-out |
 | `/login` | Staff: log in (sends each role to its own page) |
@@ -89,6 +90,24 @@ httpOnly cookie valid for 8 hours. Every staff page and API checks the role agai
 
 These starting accounts are added to `data/db.json` the first time the app runs. Change them before
 anyone else can reach the app.
+
+## Signing out (FR-KIO-10)
+
+A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records which one was used.
+
+| How | Where | `signedOutBy` |
+|---|---|---|
+| Tap **Sign out** on the badge | Visitor's phone | `badge` |
+| **Signing out?** → type your name → pick it → confirm | Reception screen, `/kiosk/signout` | `kiosk` |
+| **Signing out?** → **Scan my badge** → show the badge QR to the camera | Reception screen, `/kiosk/signout` | `kiosk` |
+| Staff click **Sign out** | `/admin` | `portal` |
+| Nobody did: signed out automatically at the end of the day | none | `auto` |
+
+- The name search needs 2 letters and only shows "Ravi K. · visiting Priya", because the screen is in a public area.
+- **Automatic sign-out:** anyone still signed in at `AUTO_SIGNOUT_TIME` (`lib/config.ts`, default `20:00`
+  location time) is signed out, with the sign-out time set to 20:00. Set it to `null` to turn it off.
+  The prototype has no scheduler, so the check runs whenever the reception screen, `/admin` or a badge
+  loads (the reception screen asks every 30 s). In production, run `sweepAutoSignOut()` from a cron job.
 
 ## Run it
 
