@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import StaffBar from "../StaffBar";
 import { ACCESS, requireStaffPage, ROLE_LABELS } from "@/lib/auth";
+import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX, LOCATION } from "@/lib/config";
 import { read } from "@/lib/db";
 import { openEmployeeVisit } from "@/lib/employees";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 // and their PIN and personal QR for signing in at reception (FR-EMP-01).
 export default async function AccountPage() {
   const staff = await requireStaffPage(ACCESS.account, "/account");
+  sweepAutoSignOut(); // don't show "signed in since" for yesterday's forgotten sign-out
   const found = staff.hostId
     ? read((d) => {
         const host = d.hosts.find((h) => h.id === staff.hostId);

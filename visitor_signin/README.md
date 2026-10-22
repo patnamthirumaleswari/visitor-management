@@ -123,7 +123,7 @@ A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records whi
 | Nobody did: signed out automatically at the end of the day | none | `auto` |
 
 - The name search needs 2 letters and only shows "Ravi K. · visiting Priya", because the screen is in a public area.
-- **Automatic sign-out:** anyone still signed in at `AUTO_SIGNOUT_TIME` (`lib/config.ts`, default `20:00`
+- **Automatic sign-out:** anyone still signed in, visitors and employees, at `AUTO_SIGNOUT_TIME` (`lib/config.ts`, default `20:00`
   location time) is signed out, with the sign-out time set to 20:00. Set it to `null` to turn it off.
   The prototype has no scheduler, so the check runs whenever the reception screen, `/admin` or a badge
   loads (the reception screen asks every 30 s). In production, run `sweepAutoSignOut()` from a cron job.

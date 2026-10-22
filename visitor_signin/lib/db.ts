@@ -29,7 +29,7 @@ export type EmployeeVisit = {
   method: "pin" | "qr" | "portal";
   signedInAt: string;
   signedOutAt?: string;
-  signedOutBy?: "pin" | "qr" | "portal";
+  signedOutBy?: "pin" | "qr" | "portal" | "auto";
 };
 
 export type Visitor = {

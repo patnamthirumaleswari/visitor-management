@@ -1,13 +1,13 @@
 import { AUTO_SIGNOUT_TIME, LOCATION } from "./config";
-import { read, write, type Visit } from "./db";
+import { read, write, type EmployeeVisit, type Visit } from "./db";
 
-// Automatic end-of-day sign-out (FR-KIO-10). Anyone still signed in when AUTO_SIGNOUT_TIME passes
-// is signed out, with the sign-out time set to that cut-off rather than to when we noticed.
+// Automatic end-of-day sign-out (FR-KIO-10). Anyone still signed in when AUTO_SIGNOUT_TIME passes,
+// visitor or employee (FR-EMP-01), is signed out, with the sign-out time set to that cut-off
+// rather than to when we noticed.
 //
 // There is no scheduler in this prototype, so the check runs whenever the reception screen or a staff
 // page asks for data (the reception screen does that every 30 s). In production run sweepAutoSignOut()
 // from a cron job instead.
-// TODO: once employee sign-in (FR-EMP-01) is merged, sign out employees here as well.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -33,17 +33,24 @@ export function autoSignOutTime(signedInAt: string): Date | null {
   return new Date(cutoff);
 }
 
-function isDue(visit: Visit, now: number) {
-  if (visit.status !== "signed_in" || !visit.signedInAt) return false;
-  const cutoff = autoSignOutTime(visit.signedInAt);
+function isPastCutoff(signedInAt: string, now: number) {
+  const cutoff = autoSignOutTime(signedInAt);
   return !!cutoff && cutoff.getTime() <= now;
+}
+
+function isDue(visit: Visit, now: number) {
+  return visit.status === "signed_in" && !!visit.signedInAt && isPastCutoff(visit.signedInAt, now);
+}
+
+function isEmployeeDue(visit: EmployeeVisit, now: number) {
+  return !visit.signedOutAt && isPastCutoff(visit.signedInAt, now);
 }
 
 /** Signs out everyone whose cut-off has passed. Returns how many were signed out. */
 export function sweepAutoSignOut(): number {
   const now = Date.now();
   // Look first without writing, so the frequent calls don't rewrite the file every time.
-  if (!read((d) => d.visits.some((v) => isDue(v, now)))) return 0;
+  if (!read((d) => d.visits.some((v) => isDue(v, now)) || d.employeeVisits.some((v) => isEmployeeDue(v, now)))) return 0;
 
   return write((d) => {
     let count = 0;
@@ -51,6 +58,12 @@ export function sweepAutoSignOut(): number {
       if (!isDue(visit, now)) continue;
       visit.status = "signed_out";
       visit.signedOutAt = autoSignOutTime(visit.signedInAt!)!.toISOString();
+      visit.signedOutBy = "auto";
+      count++;
+    }
+    for (const visit of d.employeeVisits) {
+      if (!isEmployeeDue(visit, now)) continue;
+      visit.signedOutAt = autoSignOutTime(visit.signedInAt)!.toISOString();
       visit.signedOutBy = "auto";
       count++;
     }
