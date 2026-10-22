@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
-import StaffBar from "../StaffBar";
-import { ACCESS, requireStaffPage, ROLE_LABELS } from "@/lib/auth";
+import StaffShell from "../StaffShell";
+import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX, LOCATION } from "@/lib/config";
 import { read } from "@/lib/db";
@@ -22,12 +22,9 @@ export default async function AccountPage() {
       })
     : undefined;
 
-  const bar = <StaffBar name={staff.name} role={staff.role} roleLabel={ROLE_LABELS[staff.role]} isHost={!!staff.hostId} />;
-
   if (!found) {
     return (
-      <>
-        {bar}
+      <StaffShell staff={staff}>
         <main className="phone">
           <div className="card stack">
             <h1>My account</h1>
@@ -37,7 +34,7 @@ export default async function AccountPage() {
             </p>
           </div>
         </main>
-      </>
+      </StaffShell>
     );
   }
 
@@ -50,8 +47,7 @@ export default async function AccountPage() {
     : null;
 
   return (
-    <>
-      {bar}
+    <StaffShell staff={staff}>
       <main className="phone stack">
         <div className="card stack">
           <h1>Signing in at reception</h1>
@@ -66,6 +62,6 @@ export default async function AccountPage() {
           <NotificationSettings email={host.email} phone={host.phone} notifyBy={host.notifyBy?.length ? host.notifyBy : ["email"]} />
         </div>
       </main>
-    </>
+    </StaffShell>
   );
 }

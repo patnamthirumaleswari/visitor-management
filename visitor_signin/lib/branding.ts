@@ -15,7 +15,7 @@ export type ResolvedBranding = {
 export const DEFAULT_BRANDING = {
   companyName: LOCATION.company,
   welcomeText: LOCATION.welcomeText,
-  primaryColor: "#2563eb",
+  primaryColor: "#4f46e5", // indigo, from the Visitor Connect design
 };
 
 export function getBranding(): ResolvedBranding {

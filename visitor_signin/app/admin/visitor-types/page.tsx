@@ -1,5 +1,5 @@
-import StaffBar from "../../StaffBar";
-import { ACCESS, requireStaffPage, ROLE_LABELS } from "@/lib/auth";
+import StaffShell from "../../StaffShell";
+import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { read } from "@/lib/db";
 import VisitorTypesManager from "./VisitorTypesManager";
 
@@ -16,9 +16,8 @@ export default async function VisitorTypesPage() {
   }));
 
   return (
-    <>
-      <StaffBar name={staff.name} role={staff.role} roleLabel={ROLE_LABELS[staff.role]} isHost={!!staff.hostId} />
+    <StaffShell staff={staff}>
       <VisitorTypesManager initialTypes={types} usage={usage} />
-    </>
+    </StaffShell>
   );
 }

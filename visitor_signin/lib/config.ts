@@ -5,10 +5,10 @@ import type { VisitorType } from "./db";
 export const LOCATION = {
   id: "hq",
   name: "Head Office",
-  company: "Acme Pvt Ltd",
+  company: "InternFactory Private Limited",
   timezone: "Asia/Kolkata", // decides what "today" means for invitations
   address: "4th Floor, Example Tech Park, Hitech City, Hyderabad 500081", // shown in invitations (FR-PRE-02)
-  welcomeText: "Welcome! Scan to sign in on your phone",
+  welcomeText: "Welcome! Scan to check in on your phone",
 };
 
 // Visitor types now live in data/db.json and are managed on /admin/visitor-types (FR-KIO-04/05/07).

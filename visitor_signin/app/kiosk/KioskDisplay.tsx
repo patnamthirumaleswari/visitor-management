@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ResolvedBranding } from "@/lib/branding";
+import Icon from "../Icon";
 import Logo from "../Logo";
 
 type QrResponse = { qr: string; url: string; baseUrl: string; refreshInSeconds: number };
@@ -60,7 +61,7 @@ export default function KioskDisplay({ branding }: { branding: ResolvedBranding 
         </div>
         <h1>{branding.welcomeText}</h1>
         <p className="muted">Open your phone camera and point it at the code.</p>
-        <a className="button secondary kiosk-signout-link" href="/kiosk/signout">Signing out?</a>
+        <a className="kiosk-corner kiosk-signout-link" href="/kiosk/signout"><Icon name="logout" />Signing out?</a>
         {qr ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="qr" src={qr.qr} alt="Scan this QR code with your phone camera to sign in" />
@@ -69,7 +70,7 @@ export default function KioskDisplay({ branding }: { branding: ResolvedBranding 
         )}
         {error && <p className="error">Can't reach the server — retrying…</p>}
         {qr && <p className="muted small">Phones connect to {qr.baseUrl} · code refreshes every {qr.refreshInSeconds}s</p>}
-        <a className="button secondary kiosk-staff-link" href="/kiosk/staff">Employee? Sign in or out here</a>
+        <a className="kiosk-corner kiosk-staff-link" href="/kiosk/staff"><Icon name="badge" />Employee? Sign in or out here</a>
       </div>
       {welcome && <div className="welcome" role="status">{welcome}</div>}
     </main>

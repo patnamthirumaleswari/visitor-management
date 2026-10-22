@@ -1,5 +1,5 @@
-import StaffBar from "../StaffBar";
-import { ACCESS, requireStaffPage, ROLE_LABELS } from "@/lib/auth";
+import StaffShell from "../StaffShell";
+import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { todayAtLocation } from "@/lib/dates";
 import { read } from "@/lib/db";
 import { getActiveVisitorTypes } from "@/lib/visitorTypes";
@@ -17,9 +17,8 @@ export default async function PreRegisterPage() {
       .map(({ id, name, department }) => ({ id, name, department })),
   );
   return (
-    <>
-      <StaffBar name={staff.name} role={staff.role} roleLabel={ROLE_LABELS[staff.role]} isHost={!!staff.hostId} />
+    <StaffShell staff={staff}>
       <PreRegisterForm hosts={hosts} visitorTypes={getActiveVisitorTypes()} today={todayAtLocation()} />
-    </>
+    </StaffShell>
   );
 }

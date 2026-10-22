@@ -1,4 +1,5 @@
 import { AGREEMENT, LOCATION } from "@/lib/config";
+import { getBranding } from "@/lib/branding";
 import { getSignInSession } from "@/lib/session";
 import { getActiveVisitorTypes } from "@/lib/visitorTypes";
 import ExistingBadgeLink from "./ExistingBadgeLink";
@@ -25,5 +26,5 @@ export default async function VisitPage({ searchParams }: { searchParams: Promis
     );
   }
 
-  return <SignInFlow location={LOCATION} visitorTypes={getActiveVisitorTypes()} agreement={AGREEMENT} />;
+  return <SignInFlow location={LOCATION} brand={getBranding()} visitorTypes={getActiveVisitorTypes()} agreement={AGREEMENT} />;
 }
