@@ -42,3 +42,11 @@ export const QR_TTL_SECONDS = 90;
 
 // Once scanned, the visitor has this long to finish the form on their phone.
 export const SESSION_TTL_SECONDS = 20 * 60;
+
+// Employee sign-in at reception (FR-EMP-01).
+export const MAX_PIN_FAILURES = 5; // wrong PINs in a row before the PIN locks
+export const PIN_LOCK_MINUTES = 5;
+// Scanning the same personal QR again within this time doesn't sign the person straight back out.
+export const REPEAT_SCAN_SECONDS = 60;
+// What an employee's personal QR code contains, followed by their token.
+export const EMPLOYEE_QR_PREFIX = "vms-employee:";

@@ -14,6 +14,22 @@ export type Host = {
   phone: string;
   department: string;
   notifyBy?: NotificationChannel[]; // how they want to hear about arrivals (FR-NOT-06); email if not set
+  // Employee sign-in at reception (FR-EMP-01): a PIN (stored hashed) and a personal QR code.
+  pinHash?: string;
+  pinFailures?: number; // wrong PINs in a row; the PIN locks after MAX_PIN_FAILURES
+  pinLockedUntil?: string;
+  qrToken?: string;
+};
+
+// An employee's day at the office: signed in at reception, signed out when they leave (FR-EMP-01).
+export type EmployeeVisit = {
+  id: string;
+  hostId: string;
+  locationId: string;
+  method: "pin" | "qr" | "portal";
+  signedInAt: string;
+  signedOutAt?: string;
+  signedOutBy?: "pin" | "qr" | "portal";
 };
 
 export type Visitor = {
@@ -88,6 +104,7 @@ export type Data = {
   invitations: Invitation[];
   usedSessions: string[];
   notifications: Notification[];
+  employeeVisits: EmployeeVisit[];
 };
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -106,6 +123,10 @@ function seedStaff(): StaffUser[] {
   return SEED_STAFF.map(({ password, ...user }) => ({ id: newId(), ...user, passwordHash: hashPassword(password) }));
 }
 
+// Every employee starts with this PIN so the reception sign-in can be tried straight away.
+// Each employee changes it on /account.
+const STARTING_PIN = "1234";
+
 const SEED: Omit<Data, "staff"> = {
   hosts: [
     { id: "h1", name: "Anita Sharma", email: "anita@example.com", phone: "+911111111111", department: "Engineering" },
@@ -120,6 +141,7 @@ const SEED: Omit<Data, "staff"> = {
   invitations: [],
   usedSessions: [],
   notifications: [],
+  employeeVisits: [],
 };
 
 function load(): Data {
@@ -132,6 +154,15 @@ function load(): Data {
   if (!data.staff) {
     // db.json files created before staff login existed: add the starting accounts once.
     data.staff = seedStaff();
+    save(data);
+  }
+  data.employeeVisits ??= []; // db.json files created before employee sign-in existed
+  if (data.hosts.some((h) => !h.pinHash || !h.qrToken)) {
+    // Give employees from older db.json files a starting PIN and a personal QR, once.
+    for (const host of data.hosts) {
+      host.pinHash ??= hashPassword(STARTING_PIN);
+      host.qrToken ??= crypto.randomBytes(18).toString("base64url");
+    }
     save(data);
   }
   return data;

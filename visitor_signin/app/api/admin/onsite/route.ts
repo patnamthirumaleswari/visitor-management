@@ -34,5 +34,25 @@ export async function GET() {
         };
       }),
   );
-  return NextResponse.json({ onsite });
+
+  // Employees who signed in at reception and haven't signed out (FR-EMP-01). They are on
+  // the evacuation list too.
+  const employees = read((d) =>
+    d.employeeVisits
+      .filter((v) => !v.signedOutAt)
+      .sort((a, b) => b.signedInAt.localeCompare(a.signedInAt))
+      .map((v) => {
+        const employee = d.hosts.find((h) => h.id === v.hostId);
+        return {
+          id: v.id,
+          name: employee?.name ?? "",
+          department: employee?.department ?? "",
+          phone: employee?.phone ?? "",
+          method: v.method,
+          signedInAt: v.signedInAt,
+        };
+      }),
+  );
+
+  return NextResponse.json({ onsite, employees });
 }

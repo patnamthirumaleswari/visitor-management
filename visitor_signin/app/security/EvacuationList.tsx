@@ -14,8 +14,11 @@ type OnsiteVisit = {
   signedInAt: string;
 };
 
+type OnsiteEmployee = { id: string; name: string; department: string; phone: string; signedInAt: string };
+
 export default function EvacuationList() {
   const [onsite, setOnsite] = useState<OnsiteVisit[]>([]);
+  const [employees, setEmployees] = useState<OnsiteEmployee[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
@@ -27,7 +30,9 @@ export default function EvacuationList() {
         return;
       }
       if (!res.ok) return;
-      setOnsite((await res.json()).onsite);
+      const data = await res.json();
+      setOnsite(data.onsite);
+      setEmployees(data.employees ?? []);
       setLoaded(true);
       setUpdatedAt(new Date());
     } catch {
@@ -47,7 +52,8 @@ export default function EvacuationList() {
     <main className="admin stack">
       <div className="row" style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 260px" }}>
-          <h1>Visitors on site: {onsite.length}</h1>
+          <h1>On site: {onsite.length + employees.length}</h1>
+          <p style={{ margin: "0 0 4px" }}>{onsite.length} visitors · {employees.length} employees signed in at reception</p>
           <p className="muted small">
             {LOCATION.name}{updatedAt && ` · updated ${time(updatedAt)}`}. Use this list to check everyone is out during an evacuation.
           </p>
@@ -76,6 +82,27 @@ export default function EvacuationList() {
             })}
             {loaded && onsite.length === 0 && (
               <tr><td colSpan={6} className="muted">No visitors are on site.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Employees on site: {employees.length}</h2>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Employee</th><th>Signed in</th><th>Phone</th></tr>
+          </thead>
+          <tbody>
+            {employees.map((e) => (
+              <tr key={e.id}>
+                <td><strong>{e.name}</strong>{e.department && <div className="muted small">{e.department}</div>}</td>
+                <td>{time(e.signedInAt)}</td>
+                <td>{e.phone}</td>
+              </tr>
+            ))}
+            {loaded && employees.length === 0 && (
+              <tr><td colSpan={3} className="muted">No employees have signed in at reception.</td></tr>
             )}
           </tbody>
         </table>
