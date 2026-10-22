@@ -4,8 +4,8 @@
 // or show the QR code on your badge to the camera.
 
 import { useEffect, useState } from "react";
+import BrandLine from "@/app/BrandLine";
 import InviteScanner from "@/app/visit/InviteScanner";
-import { LOCATION } from "@/lib/config";
 
 type Match = { id: string; name: string; host: string };
 type Step = "search" | "confirm" | "scan" | "done";
@@ -82,7 +82,7 @@ export default function VisitorSignOut() {
   return (
     <main className="phone" onPointerDown={() => setLastTouch(Date.now())} onKeyDown={() => setLastTouch(Date.now())}>
       <div className="card stack">
-        <p className="muted small" style={{ margin: 0 }}>{LOCATION.company} · {LOCATION.name}</p>
+        <BrandLine />
 
         {step === "search" && (
           <>

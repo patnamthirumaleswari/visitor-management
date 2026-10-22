@@ -135,3 +135,51 @@ label.check input { width: 20px; height: 20px; flex: none; }
 /* Pinned to the corner so it's visible on any screen size without scrolling */
 .kiosk-staff-link { position: fixed; top: 16px; right: 16px; width: auto; min-height: 44px; font-size: 1rem; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
 .pin-input { font-size: 2rem; letter-spacing: 0.5em; text-align: center; }
+
+/* Branding (FR-KIO-03, FR-ADM-06) */
+.logo { display: inline-block; flex: none; object-fit: contain; }
+.logo-initials { display: inline-grid; place-items: center; border-radius: 10px; font-weight: 700; letter-spacing: 0.02em; }
+.kiosk-brand { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 12px; font-size: 1.4rem; font-weight: 600; }
+.brandline { display: flex; align-items: center; gap: 10px; }
+.label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 6px; }
+.row-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.row-actions .button { width: auto; min-height: 36px; padding: 6px 12px; white-space: nowrap; }
+.branding-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+.preview-kiosk { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.preview-kiosk .kiosk-brand { font-size: 1.1rem; margin: 0; }
+.preview-welcome { font-size: 1.2rem; }
+.preview-qr { width: 96px; aspect-ratio: 1; border-radius: 6px; background: repeating-conic-gradient(#111827 0% 25%, #fff 0% 50%) 0 0 / 16px 16px; opacity: 0.85; }
+.preview-badge-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-weight: 600; }
+
+/* Visitor badge (FR-BAD-02). On screen it's a card; printed it fills a 62 mm x 100 mm label. */
+.badge-card { width: 100%; max-width: 340px; margin: 0 auto; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; color: #111827; }
+.badge-top { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-weight: 600; font-size: 0.95rem; }
+.badge-body { display: grid; justify-items: center; gap: 4px; padding: 16px 14px 12px; text-align: center; }
+.badge-photo { width: 104px; height: 104px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border); margin-bottom: 6px; }
+.badge-photo-empty { display: grid; place-items: center; background: #f3f4f6; color: #6b7280; font-size: 2rem; font-weight: 700; }
+.badge-name { font-size: 1.6rem; margin: 0; line-height: 1.15; overflow-wrap: anywhere; }
+.badge-company { margin: 0; color: #4b5563; }
+.badge-host { margin: 4px 0 0; font-size: 0.95rem; }
+.badge-type { padding: 6px 14px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.95rem; }
+.badge-bottom { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.badge-qr { width: 84px; height: 84px; flex: none; image-rendering: pixelated; }
+.badge-bottom div { display: grid; gap: 2px; font-size: 0.8rem; color: #4b5563; }
+.badge-bottom strong { color: #111827; font-size: 0.9rem; }
+.print-badge { max-width: 420px; margin: 0 auto; padding: 24px 16px; }
+
+@media print {
+  .print-badge { padding: 0; max-width: none; }
+  .badge-card { width: 62mm; max-width: none; height: 100mm; margin: 0; border: 0; border-radius: 0; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .badge-top { padding: 2.5mm 3mm; font-size: 9pt; gap: 2mm; }
+  .badge-top .logo { height: 6mm !important; width: auto; }
+  .badge-top .logo-initials { width: 6mm !important; height: 6mm !important; font-size: 7pt !important; border-radius: 1.5mm; }
+  .badge-body { padding: 3mm 3mm 2mm; gap: 0.8mm; flex: 1; align-content: center; }
+  .badge-photo { width: 24mm; height: 24mm; border-width: 0.6mm; margin-bottom: 1mm; }
+  .badge-name { font-size: 15pt; }
+  .badge-company, .badge-host { font-size: 8.5pt; }
+  .badge-type { padding: 1.5mm 3mm; font-size: 9pt; }
+  .badge-bottom { padding: 2mm 3mm; gap: 2.5mm; }
+  .badge-qr { width: 18mm; height: 18mm; }
+  .badge-bottom div { font-size: 6.5pt; }
+  .badge-bottom strong { font-size: 7.5pt; }
+}

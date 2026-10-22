@@ -109,7 +109,12 @@ export default function AdminDashboard() {
                   <td>{v.host}<NotifiedLine notified={v.notified ?? []} /></td>
                   <td>{new Date(v.signedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} <span className="muted small">via {v.source}</span></td>
                   <td>{v.phone}</td>
-                  <td><button className="secondary" onClick={() => signOut(v.id, v.name)}>Sign out</button></td>
+                  <td>
+                    <div className="row-actions">
+                      <a className="button secondary" href={`/admin/badge/${v.id}`} target="_blank" rel="noopener">Print badge</a>
+                      <button className="secondary" onClick={() => signOut(v.id, v.name)}>Sign out</button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}

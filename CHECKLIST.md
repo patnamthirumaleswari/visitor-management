@@ -33,7 +33,7 @@ The code in brackets, like `KIO-10`, is the requirement ID in the PDF, if you wa
 - [x] Take a photo with the phone camera (`KIO-07`)
 - [x] Returning visitor: name and company fill in automatically (`KIO-08`)
 - [x] Invited visitor skips the form (`KIO-09`)
-- [ ] Reception screen shows the company logo and welcome text (`KIO-03`)
+- [x] Reception screen shows the company logo and welcome text (`KIO-03`)
 - [ ] Visitor types (Guest, Contractor…) come from the database; admin can add new ones (`KIO-04`)
 - [ ] Each visitor type has its own questions: text, dropdown, yes/no, date (`KIO-05`)
 - [ ] Photo can be switched on/off per visitor type (`KIO-07`)
@@ -56,7 +56,7 @@ The code in brackets, like `KIO-10`, is the requirement ID in the PDF, if you wa
 **Badges**
 - [x] Digital badge on the visitor's phone (`BAD-04`)
 - [x] Badge says "Valid <date> only" (`BAD-05`)
-- [ ] Badge design: logo, photo, name, company, host, date, type colour, QR (`BAD-02`)
+- [x] Badge design: logo, photo, name, company, host, date, type colour, QR (`BAD-02`)
 - [ ] Print the badge on a label printer (Brother QL) (`BAD-01`)
 - [ ] Badge printing on/off per visitor type (`BAD-03`)
 

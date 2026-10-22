@@ -1,3 +1,4 @@
+import { getBranding } from "@/lib/branding";
 import { notFound } from "next/navigation";
 import { LOCATION } from "@/lib/config";
 import { formatDay, todayAtLocation } from "@/lib/dates";
@@ -33,7 +34,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   return (
     <main className="phone">
       <div className="card stack">
-        <p className="muted small">{LOCATION.company} · {LOCATION.name}</p>
+        <p className="muted small">{getBranding().companyName} · {LOCATION.name}</p>
         {used ? (
           <>
             <h1>You're all set</h1>

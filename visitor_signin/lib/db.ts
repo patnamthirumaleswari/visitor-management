@@ -99,7 +99,18 @@ export type StaffUser = {
   passwordHash: string;
 };
 
+// Company branding set on /admin/branding (FR-KIO-03, FR-BAD-02, FR-ADM-06). Missing fields
+// fall back to the defaults in lib/branding.ts.
+export type Branding = {
+  companyName?: string;
+  welcomeText?: string;
+  primaryColor?: string; // "#rrggbb"
+  logo?: string; // small PNG/JPEG/WebP data URL (prototype); file storage in production
+  updatedAt?: string;
+};
+
 export type Data = {
+  branding?: Branding;
   staff: StaffUser[];
   hosts: Host[];
   visitors: Visitor[];

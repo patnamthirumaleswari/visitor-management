@@ -2,6 +2,10 @@ import { newId, write, type Host, type Notification, type NotificationChannel, t
 import { escapeHtml, sendEmail, sendSms, type SendResult } from "./channels";
 import { LOCATION, VISITOR_TYPES } from "./config";
 import { formatDay } from "./dates";
+import { getBranding } from "./branding";
+
+/** The company name from /admin/branding, so emails match the reception screen and badge. */
+const companyName = () => getBranding().companyName;
 
 /**
  * Tells the host their visitor has arrived (FR-NOT-01/02), by email, SMS or both,
@@ -69,18 +73,18 @@ export async function notifyVisitorInvited(visitor: Visitor, host: Host, visit: 
   const record = { kind: "invitation", visitId: visit.id } as const;
 
   if (!visitor.email) {
-    const text = `${host.name} has invited you to ${LOCATION.company}, ${LOCATION.name} on ${day}. Open your invite: ${inviteUrl}`;
+    const text = `${host.name} has invited you to ${companyName()}, ${LOCATION.name} on ${day}. Open your invite: ${inviteUrl}`;
     return deliver({ ...record, channel: "sms", to: visitor.phone }, () => sendSms(visitor.phone, text));
   }
 
   return deliver({ ...record, channel: "email", to: visitor.email }, () =>
     sendEmail({
       to: visitor.email,
-      subject: `You're invited to ${LOCATION.company} on ${day}`,
+      subject: `You're invited to ${companyName()} on ${day}`,
       text: [
         `Hi ${visitor.name},`,
         "",
-        `${host.name} has invited you to ${LOCATION.company}, ${LOCATION.name} on ${day}.`,
+        `${host.name} has invited you to ${companyName()}, ${LOCATION.name} on ${day}.`,
         "",
         `Your invitation: ${inviteUrl}`,
         `Address: ${LOCATION.address}`,
@@ -90,7 +94,7 @@ export async function notifyVisitorInvited(visitor: Visitor, host: Host, visit: 
       ].join("\n"),
       html: emailLayout(`
         <h2 style="margin:0 0 12px">You're invited, ${escapeHtml(visitor.name)}</h2>
-        <p style="margin:0 0 16px">${escapeHtml(host.name)} has invited you to ${escapeHtml(LOCATION.company)}.</p>
+        <p style="margin:0 0 16px">${escapeHtml(host.name)} has invited you to ${escapeHtml(companyName())}.</p>
         ${detailsTable([
           ["Date", day],
           ["Host", host.name],
@@ -128,7 +132,7 @@ async function deliver(
 function emailLayout(body: string) {
   return `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;color:#111827;max-width:520px;margin:0 auto;padding:24px">
 ${body}
-<p style="margin:24px 0 0;font-size:13px;color:#6b7280">${escapeHtml(LOCATION.company)} · Visitor Management</p>
+<p style="margin:24px 0 0;font-size:13px;color:#6b7280">${escapeHtml(companyName())} · Visitor Management</p>
 </div>`;
 }
 

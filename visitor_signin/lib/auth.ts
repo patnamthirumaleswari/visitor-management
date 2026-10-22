@@ -26,6 +26,7 @@ export const ACCESS = {
   preRegister: ["admin", "receptionist", "host"], // /pre-register and creating invitations
   security: ["admin", "receptionist", "security"], // /security
   account: ["admin", "receptionist", "host", "security"], // /account: own notification settings
+  branding: ["admin"], // /admin/branding: logo, colour, company name, welcome text
 } satisfies Record<string, StaffRole[]>;
 
 /** Where each role lands after logging in. */

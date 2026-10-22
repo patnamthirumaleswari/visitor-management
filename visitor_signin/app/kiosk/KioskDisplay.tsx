@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LOCATION } from "@/lib/config";
+import type { ResolvedBranding } from "@/lib/branding";
+import Logo from "../Logo";
 
 type QrResponse = { qr: string; url: string; baseUrl: string; refreshInSeconds: number };
 
-export default function KioskDisplay() {
+export default function KioskDisplay({ branding }: { branding: ResolvedBranding }) {
   const [qr, setQr] = useState<QrResponse | null>(null);
   const [error, setError] = useState(false);
   const [welcome, setWelcome] = useState<string | null>(null);
@@ -52,8 +53,12 @@ export default function KioskDisplay() {
   return (
     <main className="kiosk">
       <div>
-        <p className="muted" style={{ fontSize: "1.2rem" }}>{LOCATION.company}</p>
-        <h1>{LOCATION.welcomeText}</h1>
+        {/* Company logo and welcome text from /admin/branding (FR-KIO-03) */}
+        <div className="kiosk-brand">
+          <Logo logo={branding.logo} companyName={branding.companyName} color={branding.primaryColor} textColor={branding.primaryText} size={64} />
+          <span>{branding.companyName}</span>
+        </div>
+        <h1>{branding.welcomeText}</h1>
         <p className="muted">Open your phone camera and point it at the code.</p>
         <a className="button secondary kiosk-signout-link" href="/kiosk/signout">Signing out?</a>
         {qr ? (
