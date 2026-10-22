@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { VISITOR_TYPES } from "@/lib/config";
 
 type OnsiteVisit = {
   id: string;
@@ -11,8 +10,11 @@ type OnsiteVisit = {
   photo: string | null;
   host: string;
   visitorType: string;
+  typeLabel: string;
+  typeColor: string;
   source: string;
   signedInAt: string;
+  answers: Array<{ questionId: string; label: string; value: string }>;
   notified: Array<{ channel: "email" | "sms"; status: "logged" | "sent" | "failed" }>;
 };
 
@@ -36,7 +38,7 @@ type OnsiteEmployee = { id: string; name: string; department: string; phone: str
 
 const METHOD_TEXT: Record<string, string> = { pin: "PIN", qr: "QR code", portal: "portal" };
 
-type ExpectedVisit = { id: string; name: string; company: string; phone: string; host: string; visitorType: string };
+type ExpectedVisit = { id: string; name: string; company: string; phone: string; host: string; visitorType: string; typeLabel: string; typeColor: string };
 
 export default function AdminDashboard() {
   const [onsite, setOnsite] = useState<OnsiteVisit[]>([]);
@@ -99,13 +101,17 @@ export default function AdminDashboard() {
           </thead>
           <tbody>
             {onsite.map((v) => {
-              const type = VISITOR_TYPES.find((t) => t.id === v.visitorType);
               return (
                 <tr key={v.id}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <td>{v.photo ? <img src={v.photo} alt="" /> : null}</td>
                   <td><strong>{v.name}</strong>{v.company && <div className="muted small">{v.company}</div>}</td>
-                  <td><span style={{ color: type?.color, fontWeight: 600 }}>{type?.label ?? v.visitorType}</span></td>
+                  <td>
+                    <span style={{ color: v.typeColor, fontWeight: 600 }}>{v.typeLabel}</span>
+                    {(v.answers ?? []).map((a) => (
+                      <div key={a.questionId} className="small answer"><span className="muted">{a.label}</span> {a.value}</div>
+                    ))}
+                  </td>
                   <td>{v.host}<NotifiedLine notified={v.notified ?? []} /></td>
                   <td>{new Date(v.signedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} <span className="muted small">via {v.source}</span></td>
                   <td>{v.phone}</td>
@@ -155,11 +161,10 @@ export default function AdminDashboard() {
           </thead>
           <tbody>
             {expected.map((v) => {
-              const type = VISITOR_TYPES.find((t) => t.id === v.visitorType);
               return (
                 <tr key={v.id}>
                   <td><strong>{v.name}</strong>{v.company && <div className="muted small">{v.company}</div>}</td>
-                  <td><span style={{ color: type?.color, fontWeight: 600 }}>{type?.label ?? v.visitorType}</span></td>
+                  <td><span style={{ color: v.typeColor, fontWeight: 600 }}>{v.typeLabel}</span></td>
                   <td>{v.host}</td>
                   <td>{v.phone}</td>
                 </tr>

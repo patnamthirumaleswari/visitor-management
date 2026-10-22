@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
-import { read } from "@/lib/db";
+import { read, type Data } from "@/lib/db";
+import { typeDisplay } from "@/lib/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,8 @@ export async function GET() {
           photo: visitor?.photo ?? null,
           host: host?.name ?? "",
           visitorType: v.visitorType,
+          ...typeDisplayFields(d, v.visitorType),
+          answers: v.answers ?? [], // the visitor type's questions (FR-KIO-05)
           source: v.source,
           signedInAt: v.signedInAt,
           // How the host was told (FR-NOT-01); records from before invitations count as arrivals.
@@ -57,4 +60,10 @@ export async function GET() {
   );
 
   return NextResponse.json({ onsite, employees });
+}
+
+/** Label and colour of the visit's type, so the page doesn't need its own copy of the types. */
+function typeDisplayFields(d: Data, typeId: string) {
+  const { label, color } = typeDisplay(d, typeId);
+  return { typeLabel: label, typeColor: color };
 }

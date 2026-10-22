@@ -1,11 +1,12 @@
 import { after, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { AGREEMENT, VISITOR_TYPES, type VisitorTypeConfig } from "@/lib/config";
-import { newId, normalizePhone, write, type Host, type Visit, type Visitor } from "@/lib/db";
+import { AGREEMENT } from "@/lib/config";
+import { newId, normalizePhone, write, type Host, type StandardField, type Visit, type Visitor, type VisitorType } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
 import { notifyHost } from "@/lib/notify";
 import { getSignInSession, SESSION_COOKIE } from "@/lib/session";
 import { randomToken, type TokenPayload } from "@/lib/token";
+import { checkAnswers, fieldMode, findVisitorType, getActiveVisitorTypes, STANDARD_FIELDS } from "@/lib/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ type Body = {
   photo?: string | null;
   signature?: string | null;
   agreed?: boolean;
+  answers?: Record<string, string>; // question id -> answer (FR-KIO-05)
 };
 
 const MAX_IMAGE_CHARS = 1_500_000; // ~1.1 MB once decoded; resized photos are ~50 KB
@@ -59,9 +61,12 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
     const match = findOpenInvitation(d, { token }, session.d);
     if (!match) return { error: "This invitation isn't valid today. Please sign in as a walk-in visitor.", status: 404 };
 
-    const type = VISITOR_TYPES.find((t) => t.id === match.visit.visitorType) ?? VISITOR_TYPES[0];
+    // The type chosen when they were invited, even if an admin has hidden it since.
+    const type = findVisitorType(d, match.visit.visitorType) ?? d.visitorTypes[0];
     const problem = checkPhotoAndAgreement(type, body);
     if (problem) return { error: problem, status: 400 };
+    const checked = checkAnswers(type, body.answers);
+    if ("error" in checked) return { error: checked.error, status: 400 };
 
     const now = new Date().toISOString();
     if (isImageDataUrl(body.photo)) match.visitor.photo = body.photo;
@@ -70,6 +75,7 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
       source: "qr",
       signedInAt: now,
       ...agreementFields(type, body),
+      ...(checked.answers.length ? { answers: checked.answers } : {}),
     } satisfies Partial<Visit>);
     match.invitation.usedAt = now;
     d.usedSessions.push(session.n);
@@ -80,19 +86,27 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
 }
 
 async function signInWalkIn(session: TokenPayload, body: Body) {
-  const type = VISITOR_TYPES.find((t) => t.id === body.visitorType);
+  // Only types currently offered at sign-in (hidden ones can't be picked).
+  const type = getActiveVisitorTypes().find((t) => t.id === body.visitorType);
   const name = clean(body.name);
   const phone = normalizePhone(clean(body.phone, 20));
-  const email = clean(body.email);
-  const company = clean(body.company);
-  const purpose = clean(body.purpose, 300);
-
   if (!type) return bad("Choose a visitor type.");
+
+  // Company, email and purpose are hidden, optional or required depending on the type (FR-KIO-05).
+  const field = (name: StandardField, max = 120) => (fieldMode(type, name) === "hidden" ? "" : clean(body[name], max));
+  const email = field("email");
+  const company = field("company");
+  const purpose = field("purpose", 300);
+  const missing = STANDARD_FIELDS.find((f) => fieldMode(type, f) === "required" && !{ email, company, purpose }[f]);
+  if (missing) return bad({ company: "Enter your company.", email: "Enter your email.", purpose: "Enter the purpose of your visit." }[missing]);
+
   if (name.length < 2) return bad("Enter your full name.");
   if (phone.replace(/\D/g, "").length < 8) return bad("Enter a valid mobile number.");
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad("Enter a valid email or leave it empty.");
   const problem = checkPhotoAndAgreement(type, body);
   if (problem) return bad(problem);
+  const checked = checkAnswers(type, body.answers);
+  if ("error" in checked) return bad(checked.error);
 
   const result = write((d) => {
     // Re-check inside the write so two rapid submits can't both use the same session.
@@ -121,6 +135,7 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
       signedInAt: new Date().toISOString(),
       badgeToken: randomToken(),
       ...agreementFields(type, body),
+      ...(checked.answers.length ? { answers: checked.answers } : {}),
     };
     d.visits.push(visit);
     d.usedSessions.push(session.n);
@@ -130,13 +145,13 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
   return "error" in result ? NextResponse.json({ error: result.error }, { status: result.status }) : finish(result);
 }
 
-function checkPhotoAndAgreement(type: VisitorTypeConfig, body: Body): string | null {
+function checkPhotoAndAgreement(type: VisitorType, body: Body): string | null {
   if (type.photoRequired && !isImageDataUrl(body.photo)) return "A photo is required.";
   if (type.agreementRequired && (!body.agreed || !isImageDataUrl(body.signature))) return "Please accept and sign the agreement.";
   return null;
 }
 
-function agreementFields(type: VisitorTypeConfig, body: Body) {
+function agreementFields(type: VisitorType, body: Body) {
   return type.agreementRequired ? { agreementVersion: AGREEMENT.version, signature: body.signature as string } : {};
 }
 

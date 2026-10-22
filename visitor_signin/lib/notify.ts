@@ -1,8 +1,9 @@
-import { newId, write, type Host, type Notification, type NotificationChannel, type Visit, type Visitor } from "./db";
+import { newId, read, write, type Host, type Notification, type NotificationChannel, type Visit, type Visitor } from "./db";
 import { escapeHtml, sendEmail, sendSms, type SendResult } from "./channels";
-import { LOCATION, VISITOR_TYPES } from "./config";
+import { LOCATION } from "./config";
 import { formatDay } from "./dates";
 import { getBranding } from "./branding";
+import { typeDisplay } from "./visitorTypes";
 
 /** The company name from /admin/branding, so emails match the reception screen and badge. */
 const companyName = () => getBranding().companyName;
@@ -15,7 +16,9 @@ const companyName = () => getBranding().companyName;
 export async function notifyHost(host: Host, visitor: Visitor, visit: Visit) {
   const channels: NotificationChannel[] = host.notifyBy?.length ? host.notifyBy : ["email"];
   const who = `${visitor.name}${visitor.company ? ` (${visitor.company})` : ""}`;
-  const type = VISITOR_TYPES.find((t) => t.id === visit.visitorType)?.label ?? visit.visitorType;
+  const type = read((d) => typeDisplay(d, visit.visitorType).label);
+  // The visitor type's questions and answers (FR-KIO-05), e.g. "What work are you doing today?"
+  const answers: Array<[string, string]> = (visit.answers ?? []).map((a) => [a.label, a.value]);
   const time = new Date(visit.signedInAt ?? Date.now()).toLocaleTimeString("en-IN", {
     hour: "2-digit",
     minute: "2-digit",
@@ -44,6 +47,7 @@ export async function notifyHost(host: Host, visitor: Visitor, visit: Visit) {
             `Phone: ${visitor.phone}`,
             `Signed in: ${time}`,
             `Location: ${LOCATION.name}, ${LOCATION.address}`,
+            ...answers.map(([q, a]) => `${q} ${a}`),
           ].join("\n"),
           html: emailLayout(`
             <h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} has arrived</h2>
@@ -54,6 +58,7 @@ export async function notifyHost(host: Host, visitor: Visitor, visit: Visit) {
               ["Phone", visitor.phone],
               ["Signed in", time],
               ["Location", `${LOCATION.name}, ${LOCATION.address}`],
+              ...answers,
             ])}
             <p style="margin:16px 0 0">Please come to reception to meet them.</p>`),
           inlineImage: photo,

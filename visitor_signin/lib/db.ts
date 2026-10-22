@@ -3,9 +3,42 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { STARTING_VISITOR_TYPES } from "./config";
 import { hashPassword } from "./password";
 
 export type NotificationChannel = "email" | "sms";
+
+// Visitor types and their questions, managed on /admin/visitor-types (FR-KIO-04/05/07).
+export type QuestionKind = "text" | "select" | "yesno" | "date";
+
+export type Question = {
+  id: string;
+  label: string;
+  kind: QuestionKind;
+  required: boolean;
+  options?: string[]; // for "select"
+};
+
+// Whether a standard sign-in field is asked for this visitor type (FR-KIO-05).
+// Name and mobile number are always asked: the mobile number recognises returning visitors.
+export type FieldMode = "hidden" | "optional" | "required";
+export type StandardField = "company" | "email" | "purpose";
+
+export type VisitorType = {
+  id: string;
+  label: string;
+  description: string;
+  color: string; // "#rrggbb", used on the badge and staff lists
+  fields?: Partial<Record<StandardField, FieldMode>>; // missing = "optional"
+  photoRequired: boolean; // FR-KIO-07
+  agreementRequired: boolean;
+  questions: Question[];
+  active: boolean; // hidden types aren't offered at sign-in, but old visits keep them
+};
+
+// An answer is stored with the question's wording at the time, so editing a question later
+// doesn't change what past visitors were asked.
+export type Answer = { questionId: string; label: string; value: string };
 
 export type Host = {
   id: string;
@@ -60,6 +93,7 @@ export type Visit = {
   badgeToken: string;
   agreementVersion?: string;
   signature?: string; // data URL of the finger signature
+  answers?: Answer[]; // the visitor type's questions, answered at sign-in (FR-KIO-05)
 };
 
 // One message sent (or attempted). "logged" = provider not configured, printed to the console instead.
@@ -110,6 +144,7 @@ export type Branding = {
 };
 
 export type Data = {
+  visitorTypes: VisitorType[];
   branding?: Branding;
   staff: StaffUser[];
   hosts: Host[];
@@ -141,7 +176,7 @@ function seedStaff(): StaffUser[] {
 // Each employee changes it on /account.
 const STARTING_PIN = "1234";
 
-const SEED: Omit<Data, "staff"> = {
+const SEED: Omit<Data, "staff" | "visitorTypes"> = {
   hosts: [
     { id: "h1", name: "Anita Sharma", email: "anita@example.com", phone: "+911111111111", department: "Engineering" },
     { id: "h2", name: "Rahul Verma", email: "rahul@example.com", phone: "+912222222222", department: "Sales" },
@@ -171,6 +206,16 @@ function load(): Data {
     save(data);
   }
   data.employeeVisits ??= []; // db.json files created before employee sign-in existed
+  if (!data.visitorTypes) {
+    // db.json files created before visitor types were editable: copy in the starting set, once.
+    data.visitorTypes = STARTING_VISITOR_TYPES.map((t) => ({
+      ...t,
+      fields: { ...t.fields },
+      questions: t.questions.map((q) => ({ ...q, ...(q.options ? { options: [...q.options] } : {}) })),
+      active: true,
+    }));
+    save(data);
+  }
   if (data.hosts.some((h) => !h.pinHash || !h.qrToken)) {
     // Give employees from older db.json files a starting PIN and a personal QR, once.
     for (const host of data.hosts) {

@@ -10,6 +10,7 @@ const LINKS: Array<{ href: string; label: string; roles: StaffRole[] }> = [
   { href: "/admin", label: "On site", roles: ["admin", "receptionist"] },
   { href: "/pre-register", label: "Pre-register", roles: ["admin", "receptionist", "host"] },
   { href: "/security", label: "Evacuation list", roles: ["admin", "receptionist", "security"] },
+  { href: "/admin/visitor-types", label: "Visitor types", roles: ["admin"] },
   { href: "/admin/branding", label: "Branding", roles: ["admin"] },
 ];
 

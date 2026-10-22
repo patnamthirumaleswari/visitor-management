@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LOCATION, VISITOR_TYPES } from "@/lib/config";
+import { LOCATION } from "@/lib/config";
 
 type OnsiteVisit = {
   id: string;
@@ -11,6 +11,8 @@ type OnsiteVisit = {
   photo: string | null;
   host: string;
   visitorType: string;
+  typeLabel: string;
+  typeColor: string;
   signedInAt: string;
 };
 
@@ -67,13 +69,12 @@ export default function EvacuationList() {
           </thead>
           <tbody>
             {onsite.map((v) => {
-              const type = VISITOR_TYPES.find((t) => t.id === v.visitorType);
               return (
                 <tr key={v.id}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <td>{v.photo ? <img src={v.photo} alt="" /> : null}</td>
                   <td><strong>{v.name}</strong>{v.company && <div className="muted small">{v.company}</div>}</td>
-                  <td><span style={{ color: type?.color, fontWeight: 600 }}>{type?.label ?? v.visitorType}</span></td>
+                  <td><span style={{ color: v.typeColor, fontWeight: 600 }}>{v.typeLabel}</span></td>
                   <td>{v.host}</td>
                   <td>{time(v.signedInAt)}</td>
                   <td>{v.phone}</td>

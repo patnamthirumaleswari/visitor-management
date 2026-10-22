@@ -1,8 +1,9 @@
 import QRCode from "qrcode";
 import { publicBaseUrl } from "./baseUrl";
 import { getBranding, type ResolvedBranding } from "./branding";
-import { LOCATION, VISITOR_TYPES } from "./config";
+import { LOCATION } from "./config";
 import { read, type Visit } from "./db";
+import { typeDisplay } from "./visitorTypes";
 
 // Everything a visitor badge shows (FR-BAD-02), for the phone badge and the printed one.
 
@@ -31,12 +32,12 @@ export async function loadBadge(visitId: string, token: string | null): Promise<
       visit,
       visitor: d.visitors.find((v) => v.id === visit.visitorId),
       host: d.hosts.find((h) => h.id === visit.hostId),
+      type: typeDisplay(d, visit.visitorType),
     };
   });
   if (!found?.visitor) return null;
 
-  const { visit, visitor, host } = found;
-  const type = VISITOR_TYPES.find((t) => t.id === visit.visitorType);
+  const { visit, visitor, host, type } = found;
   const signedIn = new Date(visit.signedInAt ?? Date.now());
   const qr = await QRCode.toDataURL(`${publicBaseUrl()}/badge/${visit.id}?t=${visit.badgeToken}`, {
     margin: 1,
@@ -51,8 +52,8 @@ export async function loadBadge(visitId: string, token: string | null): Promise<
     company: visitor.company,
     photo: visitor.photo ?? null,
     hostName: host?.name ?? "",
-    typeLabel: type?.label ?? visit.visitorType,
-    typeColor: type?.color ?? "#6b7280",
+    typeLabel: type.label,
+    typeColor: type.color,
     validDate: signedIn.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: LOCATION.timezone }),
     signedInTime: signedIn.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: LOCATION.timezone }),
     qr,
