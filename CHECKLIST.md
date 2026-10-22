@@ -61,12 +61,12 @@ The code in brackets, like `KIO-10`, is the requirement ID in the PDF, if you wa
 - [ ] Badge printing on/off per visitor type (`BAD-03`)
 
 **Notifications** (moved from FRIEND, you're building these)
-- [ ] Email the host when their visitor arrives (`NOT-01`)
-- [ ] The email has the visitor's name, company, photo and location (`NOT-02`)
-- [ ] Email the visitor their invitation with the link, address and map (`PRE-02`)
-- [ ] SMS the host when their visitor arrives (Twilio) (`NOT-01`)
-- [ ] Each employee chooses email, SMS or both (`NOT-06`)
-- [ ] The host gets it within 5 seconds of sign-in (`NFR-PER-02`)
+- [x] Email the host when their visitor arrives (`NOT-01`)
+- [x] The email has the visitor's name, company, photo and location (`NOT-02`)
+- [x] Email the visitor their invitation with the link, address and map (`PRE-02`)
+- [x] SMS the host when their visitor arrives (Twilio) (`NOT-01`)
+- [x] Each employee chooses email, SMS or both (`NOT-06`)
+- [x] The host gets it within 5 seconds of sign-in (`NFR-PER-02`)
 
 **Staff at reception**
 - [x] Employees sign in/out at reception with name, PIN or personal QR (`EMP-01`)
@@ -79,7 +79,7 @@ The code in brackets, like `KIO-10`, is the requirement ID in the PDF, if you wa
 - [ ] Staff log in with email and password; passwords stored hashed (`NFR-SEC-02`)
 - [ ] Admins can turn on two-step login (MFA) (`NFR-SEC-02`)
 - [ ] Roles: Company Owner, Admin, Receptionist, Host, Security (section 2)
-- [ ] Admin pages and APIs check the user's role every time (`NFR-SEC-03`)
+- [x] Admin pages and APIs check the user's role every time (`NFR-SEC-03`)
 - [ ] Every admin action recorded: who, when, IP, before/after (`ROLE-02`)
 
 **Pre-registration**
@@ -112,7 +112,7 @@ The code in brackets, like `KIO-10`, is the requirement ID in the PDF, if you wa
 **Reports and emergencies**
 - [ ] Dashboard: visitors today/week/month, busiest hours, top hosts (`REP-01`)
 - [ ] Download the visitor log as CSV and PDF (`REP-02`)
-- [ ] One-tap emergency list of everyone inside, printable (`EVA-01`)
+- [x] One-tap emergency list of everyone inside, printable (`EVA-01`)
 
 ---
 

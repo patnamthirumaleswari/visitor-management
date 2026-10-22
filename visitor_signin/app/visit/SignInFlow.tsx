@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ResolvedBranding } from "@/lib/branding";
 import type { AGREEMENT, LOCATION } from "@/lib/config";
 import type { FieldMode, Question, StandardField, VisitorType } from "@/lib/db";
 import { BADGE_STORAGE_KEY, INVITE_STORAGE_KEY } from "@/lib/storageKeys";
+import Icon from "../Icon";
+import Logo from "../Logo";
 import ExistingBadgeLink from "./ExistingBadgeLink";
 import InviteScanner from "./InviteScanner";
 
 type Props = {
   location: typeof LOCATION;
+  brand: ResolvedBranding; // company name, logo and colour from /admin/branding
   visitorTypes: VisitorType[];
   agreement: typeof AGREEMENT;
 };
@@ -18,7 +22,12 @@ type Invitation = { token: string; visitorName: string; hostName: string; visito
 type Step = "welcome" | "scan" | "type" | "details" | "host" | "invite" | "questions" | "photo" | "agreement";
 type ScanState = { attempt: number; checking: boolean; error: string | null };
 
-export default function SignInFlow({ location, visitorTypes, agreement }: Props) {
+const STEP_LABELS: Record<Step, string> = {
+  welcome: "Welcome", scan: "Scan your invite", type: "Visitor type", details: "Your details", host: "Who you are visiting",
+  invite: "Your invitation", questions: "A few questions", photo: "Selfie", agreement: "Agreement",
+};
+
+export default function SignInFlow({ location, brand, visitorTypes, agreement }: Props) {
   // null until we've checked whether this phone already holds an invite, so the welcome
   // question doesn't flash up for someone who is about to be recognised.
   const [step, setStep] = useState<Step | null>(null);
@@ -183,17 +192,29 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
 
   return (
     <main className="phone">
-      <p className="muted small" style={{ marginBottom: 6 }}>{location.company} · {location.name}</p>
-      {stepIndex >= 0 && (
-        <div className="steps" aria-hidden>
-          {steps.map((s, i) => <span key={s} className={i <= stepIndex ? "done" : ""} />)}
+      {/* Header from the Visitor Connect design: brand, location, and the step you're on */}
+      <header className="v-top">
+        <div className="v-top-row">
+          <span className="mark">
+            <Logo logo={brand.logo} companyName={brand.companyName} color={brand.primaryColor} textColor={brand.primaryText} size={30} />
+            {brand.companyName}
+          </span>
+          <span className="loc"><Icon name="pin" />{location.name}</span>
         </div>
-      )}
+        {stepIndex >= 0 && (
+          <>
+            <div className="steps" aria-hidden>
+              {steps.map((s, i) => <i key={s} className={i <= stepIndex ? "on" : ""} />)}
+            </div>
+            <div className="steplbl">Step {stepIndex + 1} of {steps.length} · {STEP_LABELS[steps[stepIndex]]}</div>
+          </>
+        )}
+      </header>
 
       <div className="card stack">
         {step === "welcome" && (
           <>
-            <h1>Welcome to {location.company}!</h1>
+            <h1>Welcome to {brand.companyName}!</h1>
             <p>Do you have a QR invite?</p>
             <button onClick={() => { setScan({ attempt: 0, checking: false, error: null }); setStep("scan"); }}>
               Yes, scan my invite
@@ -365,7 +386,7 @@ function QuestionsStep({ questions, answers, onChange }: {
               <legend>{label}</legend>
               <div className="row">
                 {["Yes", "No"].map((option) => (
-                  <button key={option} type="button" className={value === option ? "" : "secondary"} aria-pressed={value === option}
+                  <button key={option} type="button" className={value === option ? "primary" : "secondary"} aria-pressed={value === option}
                     onClick={() => onChange(q.id, option)}>
                     {option}
                   </button>

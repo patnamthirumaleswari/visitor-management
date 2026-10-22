@@ -168,6 +168,19 @@ For each type an admin chooses:
 - A type that has been used can't be deleted, only hidden. At least one type always stays available.
 - `lib/visitorTypes.ts` checks answers (required, dropdown option, yes/no, date) and what admins save.
 
+## Design (InternFactory Visitor Connect)
+
+The look follows the InternFactory Visitor Connect design: frosted-glass panels over a soft indigo / sky /
+violet background, Plus Jakarta Sans and JetBrains Mono fonts, and line icons.
+
+- `app/globals.css`: Part 1 holds the design's colour tokens and components (`.btn`, `.panel`, `.tile`,
+  `.vrow`, `.pill`, …), Part 2 restyles the existing pages, Part 3 holds feature styles.
+- `app/Icon.tsx`: the design's icon set (`<Icon name="door" />`).
+- `app/StaffShell.tsx`: frame for staff pages: sidebar on desktop, top bar and bottom menu on phones.
+- `/`: landing page with live numbers, visitor check-in and Employee / Security / Admin sign-in.
+- The brand colour from `/admin/branding` drives the gradient on buttons and highlights.
+- Light theme only for now.
+
 ## Run it
 
 Needs Node.js 20 or newer. Run these from the `visitor_signin` folder.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Icon, { type IconName } from "../Icon";
 
 type OnsiteVisit = {
   id: string;
@@ -21,16 +22,16 @@ type OnsiteVisit = {
 const STATUS_TEXT = { sent: "sent", logged: "logged only", failed: "failed" } as const;
 
 function NotifiedLine({ notified }: { notified: OnsiteVisit["notified"] }) {
-  if (notified.length === 0) return <div className="muted small">Not notified yet</div>;
+  if (notified.length === 0) return <span className="muted">Host not notified yet</span>;
   return (
-    <div className="small">
+    <span>
       {notified.map((n, i) => (
         <span key={i} className={n.status === "failed" ? "error" : "muted"}>
           {i > 0 && " · "}
           {n.channel === "sms" ? "SMS" : "Email"} {STATUS_TEXT[n.status]}
         </span>
       ))}
-    </div>
+    </span>
   );
 }
 
@@ -40,7 +41,7 @@ const METHOD_TEXT: Record<string, string> = { pin: "PIN", qr: "QR code", portal:
 
 type ExpectedVisit = { id: string; name: string; company: string; phone: string; host: string; visitorType: string; typeLabel: string; typeColor: string };
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ firstName, locationName }: { firstName: string; locationName: string }) {
   const [onsite, setOnsite] = useState<OnsiteVisit[]>([]);
   const [employees, setEmployees] = useState<OnsiteEmployee[]>([]);
   const [expected, setExpected] = useState<ExpectedVisit[]>([]);
@@ -85,97 +86,109 @@ export default function AdminDashboard() {
     load();
   };
 
+  const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const failed = onsite.filter((v) => (v.notified ?? []).some((n) => n.status === "failed")).length;
+
+  // Dashboard layout from the Visitor Connect design: number tiles, then panels of visitor rows.
   return (
-    <main className="admin stack">
-      <div className="row" style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ flex: "1 1 260px" }}>
-          <h1>Visitors on site now ({onsite.length})</h1>
-          <p className="muted small">Refreshes every 5 seconds.</p>
+    <main className="admin">
+      <div className="ph-h">
+        <div>
+          <h2>{greeting}, {firstName}</h2>
+          <p><span className="live-dot" />{locationName} · updates every 5 seconds</p>
         </div>
-        <a className="button" href="/pre-register" style={{ flex: "0 0 auto", width: "auto" }}>Pre-register a visitor</a>
-      </div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr><th></th><th>Visitor</th><th>Type</th><th>Host</th><th>Signed in</th><th>Phone</th><th></th></tr>
-          </thead>
-          <tbody>
-            {onsite.map((v) => {
-              return (
-                <tr key={v.id}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <td>{v.photo ? <img src={v.photo} alt="" /> : null}</td>
-                  <td><strong>{v.name}</strong>{v.company && <div className="muted small">{v.company}</div>}</td>
-                  <td>
-                    <span style={{ color: v.typeColor, fontWeight: 600 }}>{v.typeLabel}</span>
-                    {(v.answers ?? []).map((a) => (
-                      <div key={a.questionId} className="small answer"><span className="muted">{a.label}</span> {a.value}</div>
-                    ))}
-                  </td>
-                  <td>{v.host}<NotifiedLine notified={v.notified ?? []} /></td>
-                  <td>{new Date(v.signedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} <span className="muted small">via {v.source}</span></td>
-                  <td>{v.phone}</td>
-                  <td>
-                    <div className="row-actions">
-                      <a className="button secondary" href={`/admin/badge/${v.id}`} target="_blank" rel="noopener">Print badge</a>
-                      <button className="secondary" onClick={() => signOut(v.id, v.name)}>Sign out</button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {loaded && onsite.length === 0 && (
-              <tr><td colSpan={7} className="muted">No one is signed in.</td></tr>
-            )}
-          </tbody>
-        </table>
+        <a className="btn primary sm" href="/pre-register"><Icon name="plus" />Pre-register a visitor</a>
       </div>
 
-      <h2>Employees on site ({employees.length})</h2>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Employee</th><th>Signed in</th><th>Phone</th><th></th></tr>
-          </thead>
-          <tbody>
-            {employees.map((e) => (
-              <tr key={e.id}>
-                <td><strong>{e.name}</strong>{e.department && <div className="muted small">{e.department}</div>}</td>
-                <td>{new Date(e.signedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} <span className="muted small">with {METHOD_TEXT[e.method] ?? e.method}</span></td>
-                <td>{e.phone}</td>
-                <td><button className="secondary" onClick={() => signOut(e.id, e.name, "employee")}>Sign out</button></td>
-              </tr>
+      <div className="tiles">
+        <div className="tile gold"><span className="ti"><Icon name="users" /></span><b>{onsite.length}</b><span>Visitors on site</span></div>
+        <div className="tile"><span className="ti"><Icon name="badge" /></span><b>{employees.length}</b><span>Employees in</span></div>
+        <div className="tile"><span className="ti"><Icon name="clock" /></span><b>{expected.length}</b><span>Expected today</span></div>
+        <div className={`tile${failed ? " hot" : ""}`}><span className="ti"><Icon name="bell" /></span><b>{failed}</b><span>Host alerts failed</span></div>
+      </div>
+
+      <div className="cols two">
+        <section className="panel">
+          <div className="panel-h"><h3>Visitors on site</h3><span className="count">{onsite.length}</span></div>
+          {onsite.map((v) => {
+            const alertFailed = (v.notified ?? []).some((n) => n.status === "failed");
+            return (
+              <div key={v.id} className={`vrow${alertFailed ? " alert" : ""}`}>
+                <Avatar name={v.name} photo={v.photo} size={46} />
+                <div className="main">
+                  <div className="t">
+                    <b>{v.name}</b>
+                    <span className="pill" style={{ background: `${v.typeColor}1f`, color: v.typeColor }}>{v.typeLabel}</span>
+                  </div>
+                  <div className="meta">{v.company ? `${v.company} · ` : ""}for {v.host} · {v.phone}</div>
+                  <div className="chips">
+                    <span><Icon name="clock" /> in {time(v.signedInAt)} via {v.source}</span>
+                    <NotifiedLine notified={v.notified ?? []} />
+                  </div>
+                  {(v.answers ?? []).map((a) => (
+                    <div key={a.questionId} className="small answer"><span className="muted">{a.label}</span> {a.value}</div>
+                  ))}
+                  <div className="acts">
+                    <a className="btn line sm" href={`/admin/badge/${v.id}`} target="_blank" rel="noopener"><Icon name="badge" />Print badge</a>
+                    <button className="btn line sm" onClick={() => signOut(v.id, v.name)}><Icon name="logout" />Sign out</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {loaded && onsite.length === 0 && <Empty icon="users" title="No visitors on site" text="Visitors appear here as soon as they sign in on their phone." />}
+        </section>
+
+        <div style={{ display: "grid", gap: 16, alignContent: "start" }}>
+          <section className="panel">
+            <div className="panel-h"><h3>Expected today</h3><span className="count">{expected.length}</span></div>
+            {expected.map((v) => (
+              <div key={v.id} className="vrow">
+                <Avatar name={v.name} photo={null} size={40} />
+                <div className="main">
+                  <div className="t"><b>{v.name}</b><span className="pill t-wait">Not arrived</span></div>
+                  <div className="meta">{v.company ? `${v.company} · ` : ""}<span style={{ color: v.typeColor, fontWeight: 600 }}>{v.typeLabel}</span> · for {v.host}</div>
+                </div>
+              </div>
             ))}
-            {loaded && employees.length === 0 && (
-              <tr><td colSpan={4} className="muted">No employees have signed in at reception.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            {loaded && expected.length === 0 && <Empty icon="check" title="No one else expected" text="Pre-registered visitors show here until they arrive." />}
+          </section>
 
-      <h2>Expected today, not arrived yet ({expected.length})</h2>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr><th>Visitor</th><th>Type</th><th>Host</th><th>Phone</th></tr>
-          </thead>
-          <tbody>
-            {expected.map((v) => {
-              return (
-                <tr key={v.id}>
-                  <td><strong>{v.name}</strong>{v.company && <div className="muted small">{v.company}</div>}</td>
-                  <td><span style={{ color: v.typeColor, fontWeight: 600 }}>{v.typeLabel}</span></td>
-                  <td>{v.host}</td>
-                  <td>{v.phone}</td>
-                </tr>
-              );
-            })}
-            {loaded && expected.length === 0 && (
-              <tr><td colSpan={4} className="muted">No one else is expected today.</td></tr>
-            )}
-          </tbody>
-        </table>
+          <section className="panel">
+            <div className="panel-h"><h3>Employees on site</h3><span className="count">{employees.length}</span></div>
+            {employees.map((e) => (
+              <div key={e.id} className="vrow">
+                <Avatar name={e.name} photo={null} size={40} />
+                <div className="main">
+                  <div className="t"><b>{e.name}</b><span className="pill t-ok">In</span></div>
+                  <div className="meta">{e.department} · since {time(e.signedInAt)} with {METHOD_TEXT[e.method] ?? e.method}</div>
+                  <div className="acts">
+                    <button className="btn line sm" onClick={() => signOut(e.id, e.name, "employee")}><Icon name="logout" />Sign out</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {loaded && employees.length === 0 && <Empty icon="badge" title="No employees signed in" text="Employees who sign in at reception show here." />}
+          </section>
+        </div>
       </div>
     </main>
   );
+}
+
+/** Photo, or initials when there's no photo (Visitor Connect avatar). */
+function Avatar({ name, photo, size }: { name: string; photo: string | null; size: number }) {
+  const initials = name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+  return (
+    <span className="avatar" style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {photo ? <img src={photo} alt="" /> : initials}
+    </span>
+  );
+}
+
+function Empty({ icon, title, text }: { icon: IconName; title: string; text: string }) {
+  return <div className="empty"><Icon name={icon} /><b>{title}</b>{text}</div>;
 }

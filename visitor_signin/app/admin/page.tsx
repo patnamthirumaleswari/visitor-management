@@ -1,5 +1,6 @@
-import StaffBar from "../StaffBar";
-import { ACCESS, requireStaffPage, ROLE_LABELS } from "@/lib/auth";
+import StaffShell from "../StaffShell";
+import { ACCESS, requireStaffPage } from "@/lib/auth";
+import { LOCATION } from "@/lib/config";
 import AdminDashboard from "./AdminDashboard";
 
 export const dynamic = "force-dynamic";
@@ -9,9 +10,8 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const staff = await requireStaffPage(ACCESS.admin, "/admin");
   return (
-    <>
-      <StaffBar name={staff.name} role={staff.role} roleLabel={ROLE_LABELS[staff.role]} isHost={!!staff.hostId} />
-      <AdminDashboard />
-    </>
+    <StaffShell staff={staff}>
+      <AdminDashboard firstName={staff.name.split(" ")[0]} locationName={LOCATION.name} />
+    </StaffShell>
   );
 }
