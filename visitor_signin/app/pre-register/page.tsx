@@ -1,8 +1,8 @@
 import StaffBar from "../StaffBar";
 import { ACCESS, requireStaffPage, ROLE_LABELS } from "@/lib/auth";
-import { VISITOR_TYPES } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
 import { read } from "@/lib/db";
+import { getActiveVisitorTypes } from "@/lib/visitorTypes";
 import PreRegisterForm from "./PreRegisterForm";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function PreRegisterPage() {
   return (
     <>
       <StaffBar name={staff.name} role={staff.role} roleLabel={ROLE_LABELS[staff.role]} isHost={!!staff.hostId} />
-      <PreRegisterForm hosts={hosts} visitorTypes={VISITOR_TYPES} today={todayAtLocation()} />
+      <PreRegisterForm hosts={hosts} visitorTypes={getActiveVisitorTypes()} today={todayAtLocation()} />
     </>
   );
 }

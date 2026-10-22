@@ -2,11 +2,12 @@ import QRCode from "qrcode";
 import { after, NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { publicBaseUrl } from "@/lib/baseUrl";
-import { LOCATION, VISITOR_TYPES } from "@/lib/config";
+import { LOCATION } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
 import { newId, normalizePhone, write, type Invitation, type Visit, type Visitor } from "@/lib/db";
 import { notifyVisitorInvited } from "@/lib/notify";
 import { randomToken } from "@/lib/token";
+import { getActiveVisitorTypes } from "@/lib/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
   const email = clean(body.email);
   const company = clean(body.company);
   const visitDate = clean(body.visitDate, 10);
-  const type = VISITOR_TYPES.find((t) => t.id === body.visitorType);
+  const type = getActiveVisitorTypes().find((t) => t.id === body.visitorType);
   const hostId = staff.role === "host" ? staff.hostId : body.hostId;
 
   if (name.length < 2) return bad("Enter the visitor's full name.");

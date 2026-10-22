@@ -58,6 +58,7 @@ reception can recognise the visitor.
 | `/admin` | Reception, admin: who is on site, who is expected, manual sign-out, print badge |
 | `/admin/badge/<id>` | Reception, admin: printable badge (62 × 100 mm label) |
 | `/admin/branding` | Admin: logo, main colour, company name, reception welcome text |
+| `/admin/visitor-types` | Admin: visitor types, the fields and questions each asks, photo on/off |
 | `/kiosk/staff` | Reception screen: employees sign in/out with name + PIN or their personal QR |
 | `/account` | Employees: personal sign-in QR, change PIN, choose email/SMS for arrival messages |
 | `/security` | Security, reception, admin: printable evacuation list of everyone on site |
@@ -145,6 +146,27 @@ A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records whi
 - **Printing:** `/admin` → **Print badge** opens `/admin/badge/<id>`. It prints one badge on a 62 × 100 mm page,
   the size of a Brother QL 62 mm label (FR-BAD-01 will add direct printing). On a normal printer it prints
   at the top of an A4 sheet.
+
+## Visitor types (FR-KIO-04/05/07)
+
+Admins manage them on **`/admin/visitor-types`**. They're stored as `visitorTypes` in `data/db.json`;
+the first time the app runs it copies in Guest, Contractor, Interview and Delivery (`lib/config.ts`).
+
+For each type an admin chooses:
+
+| Setting | What it changes at sign-in |
+|---|---|
+| Name, description, colour | The choice on "What brings you in?"; the colour band on the badge and in staff lists |
+| Take a photo (FR-KIO-07) | Adds or skips the photo step |
+| Sign the visitor agreement | Adds or skips the agreement step |
+| Company / Email / Purpose: Don't ask, Optional, Required (FR-KIO-05) | Which details are asked. Name and mobile number are always asked |
+| Extra questions: text, dropdown, yes/no, date (FR-KIO-05) | A "A few questions" step after choosing the host (or after "Welcome" for invited visitors) |
+| Offer this type at sign-in | Untick to hide a type; past visits keep its name and colour |
+
+- Answers are saved on the visit with the question's wording at that moment, so editing a question later
+  doesn't change past records. They're shown on `/admin` under the visitor type and in the host's arrival email.
+- A type that has been used can't be deleted, only hidden. At least one type always stays available.
+- `lib/visitorTypes.ts` checks answers (required, dropdown option, yes/no, date) and what admins save.
 
 ## Run it
 

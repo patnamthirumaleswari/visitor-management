@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { todayAtLocation } from "@/lib/dates";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { read } from "@/lib/db";
+import { read, type Data } from "@/lib/db";
+import { typeDisplay } from "@/lib/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,15 @@ export async function GET() {
           phone: visitor?.phone ?? "",
           host: d.hosts.find((h) => h.id === v.hostId)?.name ?? "",
           visitorType: v.visitorType,
+          ...typeDisplayFields(d, v.visitorType),
         };
       }),
   );
   return NextResponse.json({ expected });
+}
+
+/** Label and colour of the visit's type, so the page doesn't need its own copy of the types. */
+function typeDisplayFields(d: Data, typeId: string) {
+  const { label, color } = typeDisplay(d, typeId);
+  return { typeLabel: label, typeColor: color };
 }

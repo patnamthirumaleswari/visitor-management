@@ -27,6 +27,7 @@ export const ACCESS = {
   security: ["admin", "receptionist", "security"], // /security
   account: ["admin", "receptionist", "host", "security"], // /account: own notification settings
   branding: ["admin"], // /admin/branding: logo, colour, company name, welcome text
+  visitorTypes: ["admin"], // /admin/visitor-types: types, their fields and questions, photo on/off
 } satisfies Record<string, StaffRole[]>;
 
 /** Where each role lands after logging in. */

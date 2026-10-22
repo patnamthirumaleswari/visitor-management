@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { normalizePhone, read } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
 import { getSignInSession } from "@/lib/session";
+import { findVisitorType } from "@/lib/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +16,18 @@ export async function GET(req: NextRequest) {
   const phone = normalizePhone(req.nextUrl.searchParams.get("phone") ?? "");
   if (!token && phone.replace(/\D/g, "").length < 8) return NextResponse.json({ invitation: null });
 
-  const match = read((d) => findOpenInvitation(d, token ? { token } : { phone }, session.d));
+  const match = read((d) => {
+    const found = findOpenInvitation(d, token ? { token } : { phone }, session.d);
+    // The full type, with its questions, even if an admin has hidden it since the invite was sent.
+    return found && { ...found, type: findVisitorType(d, found.visit.visitorType) ?? null };
+  });
   return NextResponse.json({
     invitation: match && {
       token: match.invitation.qrToken,
       visitorName: match.visitor.name,
       hostName: match.host.name,
       visitorType: match.visit.visitorType,
+      type: match.type,
     },
   });
 }

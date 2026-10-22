@@ -1,20 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { AGREEMENT, LOCATION, VisitorTypeConfig } from "@/lib/config";
+import type { AGREEMENT, LOCATION } from "@/lib/config";
+import type { FieldMode, Question, StandardField, VisitorType } from "@/lib/db";
 import { BADGE_STORAGE_KEY, INVITE_STORAGE_KEY } from "@/lib/storageKeys";
 import ExistingBadgeLink from "./ExistingBadgeLink";
 import InviteScanner from "./InviteScanner";
 
 type Props = {
   location: typeof LOCATION;
-  visitorTypes: VisitorTypeConfig[];
+  visitorTypes: VisitorType[];
   agreement: typeof AGREEMENT;
 };
 
 type HostOption = { id: string; name: string; department: string };
-type Invitation = { token: string; visitorName: string; hostName: string; visitorType: string };
-type Step = "welcome" | "scan" | "type" | "details" | "host" | "invite" | "photo" | "agreement";
+type Invitation = { token: string; visitorName: string; hostName: string; visitorType: string; type: VisitorType | null };
+type Step = "welcome" | "scan" | "type" | "details" | "host" | "invite" | "questions" | "photo" | "agreement";
 type ScanState = { attempt: number; checking: boolean; error: string | null };
 
 export default function SignInFlow({ location, visitorTypes, agreement }: Props) {
@@ -22,7 +23,8 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
   // question doesn't flash up for someone who is about to be recognised.
   const [step, setStep] = useState<Step | null>(null);
   const [scan, setScan] = useState<ScanState>({ attempt: 0, checking: false, error: null });
-  const [type, setType] = useState<VisitorTypeConfig | null>(null);
+  const [type, setType] = useState<VisitorType | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string>>({}); // question id -> answer (FR-KIO-05)
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [details, setDetails] = useState({ name: "", phone: "", email: "", company: "", purpose: "" });
   const [returning, setReturning] = useState(false);
@@ -36,23 +38,30 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
   // Invited visitors skip the form and host search (requirements §6 flow: "QR invite? yes: skip the form").
   // "welcome" and "scan" come before either path, so they aren't counted in the progress bar.
   const steps: Step[] = invitation ? ["invite"] : ["type", "details", "host"];
+  if (type?.questions.length) steps.push("questions");
   if (type?.photoRequired) steps.push("photo");
   if (type?.agreementRequired) steps.push("agreement");
   const stepIndex = step ? steps.indexOf(step) : -1;
   const isLast = stepIndex === steps.length - 1;
+
+  // Whether the chosen type asks for company, email or purpose (FR-KIO-05); optional if not set.
+  const modeOf = (field: StandardField): FieldMode => type?.fields?.[field] ?? "optional";
+  const labelFor = (text: string, field: StandardField) => (modeOf(field) === "required" ? text : `${text} (optional)`);
 
   const next = () => (isLast ? submit() : setStep(steps[stepIndex + 1]));
   const back = () => setStep(steps[Math.max(0, stepIndex - 1)]);
 
   const applyInvitation = (inv: Invitation) => {
     setInvitation(inv);
-    setType(visitorTypes.find((t) => t.id === inv.visitorType) ?? visitorTypes[0]);
+    setType(inv.type ?? visitorTypes.find((t) => t.id === inv.visitorType) ?? visitorTypes[0]);
+    setAnswers({});
     setStep("invite");
   };
 
   const dropInvitation = () => {
     setInvitation(null);
     setType(null);
+    setAnswers({});
     setStep("type");
     try {
       localStorage.removeItem(INVITE_STORAGE_KEY);
@@ -131,8 +140,8 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
     setError(null);
     try {
       const body = invitation
-        ? { invitationToken: invitation.token, photo, signature, agreed }
-        : { visitorType: type.id, ...details, hostId: host!.id, photo, signature, agreed };
+        ? { invitationToken: invitation.token, photo, signature, agreed, answers }
+        : { visitorType: type.id, ...details, hostId: host!.id, photo, signature, agreed, answers };
       const res = await fetch("/api/visits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -156,9 +165,11 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
 
   const canContinue =
     step === "type" ? !!type :
-    step === "details" ? details.name.trim().length > 1 && details.phone.replace(/\D/g, "").length >= 8 :
+    step === "details" ? details.name.trim().length > 1 && details.phone.replace(/\D/g, "").length >= 8 &&
+      (["email", "company", "purpose"] as const).every((f) => modeOf(f) !== "required" || !!details[f].trim()) :
     step === "host" ? !!host :
     step === "invite" ? true :
+    step === "questions" ? !!type && type.questions.every((q) => !q.required || !!answers[q.id]?.trim()) :
     step === "photo" ? !!photo :
     agreed && !!signature;
 
@@ -219,7 +230,7 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
                 key={t.id}
                 className="choice"
                 style={type?.id === t.id ? { outline: `2px solid ${t.color}` } : undefined}
-                onClick={() => { setType(t); setStep("details"); }}
+                onClick={() => { if (type?.id !== t.id) setAnswers({}); setType(t); setStep("details"); }}
               >
                 <span className="dot" style={{ background: t.color }} />
                 <span>{t.label}<small>{t.description}</small></span>
@@ -236,9 +247,16 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
               onChange={(v) => setDetails({ ...details, phone: v })} onBlur={() => lookupPhone(details.phone)} />
             {returning && <p className="notice">Welcome back! We've filled in your details from last time.</p>}
             <Field label="Full name" autoComplete="name" value={details.name} onChange={(v) => setDetails({ ...details, name: v })} />
-            <Field label="Email (optional)" type="email" autoComplete="email" value={details.email} onChange={(v) => setDetails({ ...details, email: v })} />
-            <Field label="Company (optional)" autoComplete="organization" value={details.company} onChange={(v) => setDetails({ ...details, company: v })} />
-            <Field label="Purpose of visit (optional)" value={details.purpose} onChange={(v) => setDetails({ ...details, purpose: v })} />
+            {/* Each type chooses which of these it asks, and which are required (FR-KIO-05). */}
+            {modeOf("email") !== "hidden" && (
+              <Field label={labelFor("Email", "email")} type="email" autoComplete="email" value={details.email} onChange={(v) => setDetails({ ...details, email: v })} />
+            )}
+            {modeOf("company") !== "hidden" && (
+              <Field label={labelFor("Company", "company")} autoComplete="organization" value={details.company} onChange={(v) => setDetails({ ...details, company: v })} />
+            )}
+            {modeOf("purpose") !== "hidden" && (
+              <Field label={labelFor("Purpose of visit", "purpose")} value={details.purpose} onChange={(v) => setDetails({ ...details, purpose: v })} />
+            )}
           </>
         )}
 
@@ -255,6 +273,10 @@ export default function SignInFlow({ location, visitorTypes, agreement }: Props)
               Not {invitation.visitorName.split(" ")[0]}? Sign in as a walk-in
             </button>
           </>
+        )}
+
+        {step === "questions" && type && (
+          <QuestionsStep questions={type.questions} answers={answers} onChange={(id, value) => setAnswers((a) => ({ ...a, [id]: value }))} />
         )}
 
         {step === "photo" && <PhotoStep photo={photo} onPhoto={setPhoto} />}
@@ -321,6 +343,52 @@ function Field(props: {
       <input id={id} type={props.type ?? "text"} autoComplete={props.autoComplete} inputMode={props.inputMode}
         value={props.value} onChange={(e) => props.onChange(e.target.value)} onBlur={props.onBlur} />
     </div>
+  );
+}
+
+/** The visitor type's own questions (FR-KIO-05): text, dropdown, yes/no or date. */
+function QuestionsStep({ questions, answers, onChange }: {
+  questions: Question[];
+  answers: Record<string, string>;
+  onChange: (id: string, value: string) => void;
+}) {
+  return (
+    <>
+      <h1>A few questions</h1>
+      {questions.map((q) => {
+        const id = `question-${q.id}`;
+        const label = `${q.label}${q.required ? "" : " (optional)"}`;
+        const value = answers[q.id] ?? "";
+        if (q.kind === "yesno") {
+          return (
+            <fieldset key={q.id} className="question">
+              <legend>{label}</legend>
+              <div className="row">
+                {["Yes", "No"].map((option) => (
+                  <button key={option} type="button" className={value === option ? "" : "secondary"} aria-pressed={value === option}
+                    onClick={() => onChange(q.id, option)}>
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          );
+        }
+        return (
+          <div key={q.id}>
+            <label htmlFor={id}>{label}</label>
+            {q.kind === "select" ? (
+              <select id={id} value={value} onChange={(e) => onChange(q.id, e.target.value)}>
+                <option value="">Choose one</option>
+                {(q.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            ) : (
+              <input id={id} type={q.kind === "date" ? "date" : "text"} maxLength={300} value={value} onChange={(e) => onChange(q.id, e.target.value)} />
+            )}
+          </div>
+        );
+      })}
+    </>
   );
 }
 
