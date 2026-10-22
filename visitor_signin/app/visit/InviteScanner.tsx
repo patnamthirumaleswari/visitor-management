@@ -4,12 +4,15 @@ import jsQR from "jsqr";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Reads the QR code from the visitor's invitation (FR-KIO-09).
+ * Reads the QR code from the visitor's invitation (FR-KIO-09), or an employee's personal QR
+ * on the reception screen (FR-EMP-01); `what` names the code in the instructions.
  * Uses the live camera when the browser allows it (HTTPS or localhost). Over plain HTTP on the
  * office Wi-Fi getUserMedia is blocked, so it falls back to taking a photo of the code, the same
  * way the photo step does.
  */
-export default function InviteScanner({ onDetected }: { onDetected: (text: string) => void }) {
+type Props = { onDetected: (text: string) => void; what?: string };
+
+export default function InviteScanner({ onDetected, what = "the QR code in your invitation" }: Props) {
   const [mode, setMode] = useState<"live" | "photo" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -88,8 +91,8 @@ export default function InviteScanner({ onDetected }: { onDetected: (text: strin
   if (mode === "live") {
     return (
       <>
-        <video ref={videoRef} className="scanner" muted playsInline aria-label="Camera view for scanning your invitation" />
-        <p className="muted small">Point the camera at the QR code in your invitation, or upload a screenshot of it.</p>
+        <video ref={videoRef} className="scanner" muted playsInline aria-label={`Camera view for scanning ${what}`} />
+        <p className="muted small">Point the camera at {what}, or upload a screenshot of it.</p>
         {upload}
         {error && <p className="error" role="alert">{error}</p>}
       </>
@@ -98,7 +101,7 @@ export default function InviteScanner({ onDetected }: { onDetected: (text: strin
 
   return (
     <>
-      <p className="muted">Take a photo of the QR code in your invitation, or upload a screenshot of it.</p>
+      <p className="muted">Take a photo of {what}, or upload a screenshot of it.</p>
       <input ref={inputRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.currentTarget)} />
       <button onClick={() => inputRef.current?.click()} disabled={!mode}>Open camera</button>
       {upload}

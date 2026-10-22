@@ -32,10 +32,15 @@ function NotifiedLine({ notified }: { notified: OnsiteVisit["notified"] }) {
   );
 }
 
+type OnsiteEmployee = { id: string; name: string; department: string; phone: string; method: string; signedInAt: string };
+
+const METHOD_TEXT: Record<string, string> = { pin: "PIN", qr: "QR code", portal: "portal" };
+
 type ExpectedVisit = { id: string; name: string; company: string; phone: string; host: string; visitorType: string };
 
 export default function AdminDashboard() {
   const [onsite, setOnsite] = useState<OnsiteVisit[]>([]);
+  const [employees, setEmployees] = useState<OnsiteEmployee[]>([]);
   const [expected, setExpected] = useState<ExpectedVisit[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -51,7 +56,9 @@ export default function AdminDashboard() {
         return;
       }
       if (!onsiteRes.ok || !expectedRes.ok) return;
-      setOnsite((await onsiteRes.json()).onsite);
+      const onsiteData = await onsiteRes.json();
+      setOnsite(onsiteData.onsite);
+      setEmployees(onsiteData.employees ?? []);
       setExpected((await expectedRes.json()).expected);
       setLoaded(true);
     } catch {
@@ -65,9 +72,10 @@ export default function AdminDashboard() {
     return () => clearInterval(t);
   }, [load]);
 
-  const signOut = async (id: string, name: string) => {
+  const signOut = async (id: string, name: string, kind: "visit" | "employee" = "visit") => {
     if (!confirm(`Sign out ${name}?`)) return;
-    const res = await fetch(`/api/admin/visits/${id}/signout`, { method: "POST" });
+    const url = kind === "employee" ? `/api/admin/employee-visits/${id}/signout` : `/api/admin/visits/${id}/signout`;
+    const res = await fetch(url, { method: "POST" });
     if (res.status === 401) {
       window.location.href = "/login?next=/admin";
       return;
@@ -79,7 +87,7 @@ export default function AdminDashboard() {
     <main className="admin stack">
       <div className="row" style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 260px" }}>
-          <h1>On site now ({onsite.length})</h1>
+          <h1>Visitors on site now ({onsite.length})</h1>
           <p className="muted small">Refreshes every 5 seconds.</p>
         </div>
         <a className="button" href="/pre-register" style={{ flex: "0 0 auto", width: "auto" }}>Pre-register a visitor</a>
@@ -107,6 +115,28 @@ export default function AdminDashboard() {
             })}
             {loaded && onsite.length === 0 && (
               <tr><td colSpan={7} className="muted">No one is signed in.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Employees on site ({employees.length})</h2>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Employee</th><th>Signed in</th><th>Phone</th><th></th></tr>
+          </thead>
+          <tbody>
+            {employees.map((e) => (
+              <tr key={e.id}>
+                <td><strong>{e.name}</strong>{e.department && <div className="muted small">{e.department}</div>}</td>
+                <td>{new Date(e.signedInAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} <span className="muted small">with {METHOD_TEXT[e.method] ?? e.method}</span></td>
+                <td>{e.phone}</td>
+                <td><button className="secondary" onClick={() => signOut(e.id, e.name, "employee")}>Sign out</button></td>
+              </tr>
+            ))}
+            {loaded && employees.length === 0 && (
+              <tr><td colSpan={4} className="muted">No employees have signed in at reception.</td></tr>
             )}
           </tbody>
         </table>

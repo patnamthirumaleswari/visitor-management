@@ -63,6 +63,7 @@ export default function KioskDisplay() {
         )}
         {error && <p className="error">Can't reach the server — retrying…</p>}
         {qr && <p className="muted small">Phones connect to {qr.baseUrl} · code refreshes every {qr.refreshInSeconds}s</p>}
+        <a className="button secondary kiosk-staff-link" href="/kiosk/staff">Employee? Sign in or out here</a>
       </div>
       {welcome && <div className="welcome" role="status">{welcome}</div>}
     </main>
