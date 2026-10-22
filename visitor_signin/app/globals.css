@@ -102,7 +102,9 @@ button.danger { background: var(--danger); }
 /* Kiosk display */
 .kiosk { min-height: 100dvh; display: grid; place-items: center; padding: 24px; text-align: center; background: #fff; }
 .kiosk h1 { font-size: clamp(1.8rem, 4vw, 3rem); }
-.kiosk .qr { width: min(70vw, 60vh, 460px); aspect-ratio: 1; image-rendering: pixelated; }
+/* The QR takes whatever height is left after the logo, welcome text and captions (~290px), so the
+   reception screen always fits on one screen without scrolling, down to very short windows. */
+.kiosk .qr { width: max(160px, min(70vw, calc(100dvh - 290px), 460px)); aspect-ratio: 1; image-rendering: pixelated; }
 /* Pinned top-left so leaving visitors find it without scrolling (employee sign-in sits top-right) */
 .kiosk .kiosk-signout-link { position: fixed; top: 16px; left: 16px; width: auto; min-height: 44px; font-size: 1rem; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
 .kiosk .welcome { position: fixed; inset: auto 0 32px; margin: 0 auto; width: fit-content; background: var(--success); color: #fff; padding: 14px 28px; border-radius: 999px; font-size: 1.4rem; font-weight: 600; }
