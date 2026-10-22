@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { notFound } from "next/navigation";
+import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { publicBaseUrl } from "@/lib/baseUrl";
 import { LOCATION, VISITOR_TYPES } from "@/lib/config";
 import { read } from "@/lib/db";
@@ -17,6 +18,7 @@ export default async function BadgePage({
 }) {
   const { id } = await params;
   const { t } = await searchParams;
+  sweepAutoSignOut(); // an old badge opened the next day shows "signed out", not "signed in"
 
   const data = read((d) => {
     const visit = d.visits.find((v) => v.id === id);
@@ -61,6 +63,8 @@ export default async function BadgePage({
             <SignOutButton visitId={visit.id} token={visit.badgeToken} />
             <p className="small muted">Keep this page open, or bookmark it, to sign out when you leave.</p>
           </>
+        ) : visit.signedOutBy === "auto" ? (
+          <p className="notice">You were signed out automatically at the end of the day. Thanks for visiting!</p>
         ) : (
           <p className="notice">You signed out. Thanks for visiting!</p>
         )}

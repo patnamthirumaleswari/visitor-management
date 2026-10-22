@@ -55,6 +55,7 @@ export default function KioskDisplay() {
         <p className="muted" style={{ fontSize: "1.2rem" }}>{LOCATION.company}</p>
         <h1>{LOCATION.welcomeText}</h1>
         <p className="muted">Open your phone camera and point it at the code.</p>
+        <a className="button secondary kiosk-signout-link" href="/kiosk/signout">Signing out?</a>
         {qr ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="qr" src={qr.qr} alt="Scan this QR code with your phone camera to sign in" />

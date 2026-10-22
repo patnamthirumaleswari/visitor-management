@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX } from "@/lib/config";
 import { write } from "@/lib/db";
 import { checkPin, toggleEmployee, type EmployeeResult } from "@/lib/employees";
@@ -17,6 +18,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
+
+  // Close yesterday's visit first if they forgot to sign out, so this tap signs them in, not out.
+  sweepAutoSignOut();
 
   const result: EmployeeResult = write((d) => {
     if (typeof body.qr === "string") {

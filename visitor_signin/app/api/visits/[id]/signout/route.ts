@@ -13,6 +13,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (visit.status === "signed_out") return "already";
     visit.status = "signed_out";
     visit.signedOutAt = new Date().toISOString();
+    visit.signedOutBy = "badge";
     return "ok";
   });
 
