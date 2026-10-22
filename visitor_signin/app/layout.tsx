@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { getBranding } from "@/lib/branding";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,9 +14,11 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // The brand colour from /admin/branding replaces the default blue on every page (FR-ADM-06).
+  const { primaryColor, primaryText } = getBranding();
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body style={{ ["--primary" as string]: primaryColor, ["--primary-text" as string]: primaryText }}>{children}</body>
     </html>
   );
 }

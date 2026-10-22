@@ -55,7 +55,9 @@ reception can recognise the visitor.
 | `/login` | Staff: log in (sends each role to its own page) |
 | `/pre-register` | Host, reception, admin: invite a visitor |
 | `/invite/<code>` | Visitor's phone: their invitation |
-| `/admin` | Reception, admin: who is on site, who is expected, manual sign-out |
+| `/admin` | Reception, admin: who is on site, who is expected, manual sign-out, print badge |
+| `/admin/badge/<id>` | Reception, admin: printable badge (62 × 100 mm label) |
+| `/admin/branding` | Admin: logo, main colour, company name, reception welcome text |
 | `/kiosk/staff` | Reception screen: employees sign in/out with name + PIN or their personal QR |
 | `/account` | Employees: personal sign-in QR, change PIN, choose email/SMS for arrival messages |
 | `/security` | Security, reception, admin: printable evacuation list of everyone on site |
@@ -127,6 +129,22 @@ A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records whi
   location time) is signed out, with the sign-out time set to 20:00. Set it to `null` to turn it off.
   The prototype has no scheduler, so the check runs whenever the reception screen, `/admin` or a badge
   loads (the reception screen asks every 30 s). In production, run `sweepAutoSignOut()` from a cron job.
+
+## Branding and badges (FR-KIO-03, FR-BAD-02, FR-ADM-06)
+
+- **`/admin/branding`** (admins only): company name, welcome text, main colour and logo, with a live preview.
+  The logo is shrunk to 400 px in the browser and saved as PNG; PNG, JPG and WebP are accepted, SVG isn't
+  (it can contain scripts). Without a logo, the company initials are shown in the main colour.
+- The settings are stored as `branding` in `data/db.json` (`lib/branding.ts` has the defaults) and used by:
+  the reception screen (logo + welcome text), the employee and sign-out screens, the badge, the invitation
+  page, invitation emails, and the colour of buttons and links on every page. Button text switches between
+  white and dark automatically so it stays readable on any colour.
+- **Badge** (`app/badge/BadgeCard.tsx`): brand-colour header with logo and company, photo (or initials),
+  name, company, host, a band in the visitor type's colour, the date it's valid, and the QR code that the
+  reception screen scans for sign-out. The same design is used on the visitor's phone and for printing.
+- **Printing:** `/admin` → **Print badge** opens `/admin/badge/<id>`. It prints one badge on a 62 × 100 mm page,
+  the size of a Brother QL 62 mm label (FR-BAD-01 will add direct printing). On a normal printer it prints
+  at the top of an A4 sheet.
 
 ## Run it
 

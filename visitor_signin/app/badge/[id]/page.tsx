@@ -1,14 +1,12 @@
-import QRCode from "qrcode";
 import { notFound } from "next/navigation";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
-import { publicBaseUrl } from "@/lib/baseUrl";
-import { LOCATION, VISITOR_TYPES } from "@/lib/config";
-import { read } from "@/lib/db";
+import { loadBadge } from "@/lib/badge";
+import BadgeCard from "../BadgeCard";
 import SignOutButton from "./SignOutButton";
 
 export const dynamic = "force-dynamic";
 
-// Digital badge on the visitor's phone (FR-BAD-04/05), with self sign-out.
+// Digital badge on the visitor's phone (FR-BAD-02/04/05), with self sign-out.
 export default async function BadgePage({
   params,
   searchParams,
@@ -20,55 +18,33 @@ export default async function BadgePage({
   const { t } = await searchParams;
   sweepAutoSignOut(); // an old badge opened the next day shows "signed out", not "signed in"
 
-  const data = read((d) => {
-    const visit = d.visits.find((v) => v.id === id);
-    // An "expected" visit has no badge yet — the visitor hasn't signed in.
-    if (!visit || !t || visit.badgeToken !== t || visit.status === "expected") return null;
-    return {
-      visit,
-      visitor: d.visitors.find((v) => v.id === visit.visitorId)!,
-      host: d.hosts.find((h) => h.id === visit.hostId)!,
-    };
-  });
-  if (!data) notFound();
+  const badge = t ? await loadBadge(id, t) : null;
+  if (!badge) notFound();
 
-  const { visit, visitor, host } = data;
-  const type = VISITOR_TYPES.find((v) => v.id === visit.visitorType);
-  const signedIn = new Date(visit.signedInAt ?? Date.now());
-  const validDate = signedIn.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  // The badge QR lets reception (or a future kiosk scanner) look up this visit (FR-KIO-10).
-  const badgeQr = await QRCode.toDataURL(`${publicBaseUrl()}/badge/${visit.id}?t=${visit.badgeToken}`, { margin: 1, width: 300 });
+  const { visit } = badge;
+  const hostFirstName = badge.hostName.split(" ")[0];
 
   return (
-    <main className="phone">
-      <div className="card badge stack" style={{ ["--badge" as string]: type?.color }}>
-        <p className="muted small">{LOCATION.company} · {LOCATION.name}</p>
-        {visitor.photo && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="photo" src={visitor.photo} alt="" />
-        )}
-        <div>
-          <h1>{visitor.name}</h1>
-          {visitor.company && <p className="muted" style={{ margin: 0 }}>{visitor.company}</p>}
+    <main className="phone stack">
+      {visit.status === "signed_in" ? (
+        <>
+          <BadgeCard badge={badge} />
+          <p className="notice" role="status">You&apos;re signed in. {hostFirstName} has been told you&apos;ve arrived.</p>
+          <SignOutButton visitId={visit.id} token={visit.badgeToken} />
+          <p className="small muted" style={{ textAlign: "center" }}>
+            Keep this page open, or bookmark it, to sign out when you leave. You can also scan the code at reception.
+          </p>
+        </>
+      ) : (
+        <div className="card stack" style={{ textAlign: "center" }}>
+          <h1>{badge.visitorName}</h1>
+          <p className="notice" style={{ margin: 0 }}>
+            {visit.signedOutBy === "auto"
+              ? "You were signed out automatically at the end of the day. Thanks for visiting!"
+              : "You signed out. Thanks for visiting!"}
+          </p>
         </div>
-        {type && <span className="type" style={{ background: type.color }}>{type.label}</span>}
-        <p style={{ margin: 0 }}>Visiting <strong>{host.name}</strong></p>
-
-        {visit.status === "signed_in" ? (
-          <>
-            <p className="notice" role="status">You're signed in. {host.name.split(" ")[0]} has been told you've arrived.</p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={badgeQr} alt="Badge QR code" width={180} height={180} style={{ margin: "0 auto", display: "block" }} />
-            <p className="small muted">Valid {validDate} only · signed in {signedIn.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</p>
-            <SignOutButton visitId={visit.id} token={visit.badgeToken} />
-            <p className="small muted">Keep this page open, or bookmark it, to sign out when you leave.</p>
-          </>
-        ) : visit.signedOutBy === "auto" ? (
-          <p className="notice">You were signed out automatically at the end of the day. Thanks for visiting!</p>
-        ) : (
-          <p className="notice">You signed out. Thanks for visiting!</p>
-        )}
-      </div>
+      )}
     </main>
   );
 }
