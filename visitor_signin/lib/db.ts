@@ -32,6 +32,7 @@ export type VisitorType = {
   fields?: Partial<Record<StandardField, FieldMode>>; // missing = "optional"
   photoRequired: boolean; // FR-KIO-07
   agreementRequired: boolean;
+  approvalRequired?: boolean; // host must approve entry; missing = yes
   questions: Question[];
   active: boolean; // hidden types aren't offered at sign-in, but old visits keep them
 };
@@ -81,11 +82,22 @@ export type Visit = {
   locationId: string;
   visitorType: string;
   purpose: string;
-  // "expected" = pre-registered, not arrived yet (FR-PRE-01)
-  status: "expected" | "signed_in" | "signed_out";
+  // expected = pre-registered, not arrived yet (FR-PRE-01)
+  // pending  = at reception, waiting for the host to approve entry (Visitor Connect)
+  // signed_in = on site (approved, or invited, or a type that needs no approval)
+  // denied   = the host or an admin did not approve entry
+  status: "expected" | "pending" | "signed_in" | "denied" | "signed_out";
   source: "qr" | "kiosk" | "portal";
   expectedDate?: string; // YYYY-MM-DD, for pre-registered visits
-  signedInAt?: string;
+  no?: number; // visitor number, counting up at the location (101, 102, …)
+  code?: string; // 4-digit visit code for "Find my visit", unique among open visits
+  checkedInAt?: string; // when they arrived and checked in on their phone
+  signedInAt?: string; // when entry started (approved, or straight away when no approval is needed)
+  decidedAt?: string;
+  decidedBy?: string; // name of who approved or denied, e.g. "Priya Nair (from email)"
+  decisionNote?: string; // optional note shown to the visitor when entry isn't approved
+  escalated?: boolean; // the host didn't answer in time and reception was told
+  timeline?: TimelineEvent[]; // what happened, in order; becomes the gate pass record in Stage 3
   signedOutAt?: string;
   // How they signed out (FR-KIO-10): badge on their phone, reception screen, staff portal, or the
   // automatic end-of-day sign-out. Missing on visits signed out before this was recorded.
@@ -99,7 +111,7 @@ export type Visit = {
 // One message sent (or attempted). "logged" = provider not configured, printed to the console instead.
 export type Notification = {
   id: string;
-  kind?: "arrival" | "invitation"; // missing on records from before invitations were sent
+  kind?: "arrival" | "invitation" | "approval" | "escalation"; // missing on records from before invitations were sent
   visitId: string;
   hostId?: string;
   to: string;
@@ -143,7 +155,10 @@ export type Branding = {
   updatedAt?: string;
 };
 
+export type TimelineEvent = { at: string; event: string; by: string };
+
 export type Data = {
+  counters?: { visitNo: number }; // last visitor number handed out
   visitorTypes: VisitorType[];
   branding?: Branding;
   staff: StaffUser[];
@@ -214,6 +229,12 @@ function load(): Data {
       questions: t.questions.map((q) => ({ ...q, ...(q.options ? { options: [...q.options] } : {}) })),
       active: true,
     }));
+    save(data);
+  }
+  const delivery = data.visitorTypes.find((t) => t.id === "delivery");
+  if (delivery && delivery.approvalRequired === undefined) {
+    // Saved before host approval existed: couriers keep going straight in, as the starting set intends.
+    delivery.approvalRequired = false;
     save(data);
   }
   if (data.hosts.some((h) => !h.pinHash || !h.qrToken)) {

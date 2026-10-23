@@ -221,6 +221,7 @@ export default function SignInFlow({ location, brand, visitorTypes, agreement }:
             </button>
             <button className="secondary" onClick={() => setStep("type")}>No, sign in as a visitor</button>
             <ExistingBadgeLink />
+            <a className="button secondary" href="/find">Already checked in? Find my visit</a>
           </>
         )}
 

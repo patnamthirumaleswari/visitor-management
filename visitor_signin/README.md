@@ -168,6 +168,27 @@ For each type an admin chooses:
 - A type that has been used can't be deleted, only hidden. At least one type always stays available.
 - `lib/visitorTypes.ts` checks answers (required, dropdown option, yes/no, date) and what admins save.
 
+## Host approval (Visitor Connect)
+
+```
+Visitor checks in on their phone  ->  "Waiting for approval" (visitor no. 105 · code 4821, refreshes by itself)
+Host gets email/SMS with an Approve / Deny link, and sees it under Home -> "Needs your answer"
+Approve -> phone shows "You are approved" + badge        Deny (+ optional note) -> "Entry not approved"
+No answer in 5 min -> marked Escalated, reception told (RECEPTION_EMAIL), admins/reception can answer
+```
+
+- Walk-ins wait for approval. **Invited visitors go straight in** (the host already invited them), and so do
+  visitor types with **"Host approves entry"** switched off on `/admin/visitor-types` (Delivery by default).
+- Every visit gets a **visitor number** (101, 102, …) and a **4-digit visit code**. **"Find my visit"** (`/find`)
+  reopens the visit screen with the code and mobile number; wrong tries are limited.
+- Hosts land on **`/requests`** (Home): waiting visitors with Approve / Deny, and today's visitors. `/admin` shows
+  the same waiting list to admins and reception.
+- The email link (`/approve/<token>`) works without signing in for 24 hours, only for that visit and host.
+- One open visit per mobile number. Unanswered requests are closed by the 8 pm automatic sign-out.
+- Visitors waiting at reception are on the evacuation list (`/security`).
+- Logic lives in `lib/approvals.ts` (statuses, numbers, who can decide, escalation) and `lib/requests.ts`.
+- `npm run dev` now also works from the repository root (root `package.json` forwards to `visitor_signin`).
+
 ## Design (InternFactory Visitor Connect)
 
 The look follows the InternFactory Visitor Connect design: frosted-glass panels over a soft indigo / sky /

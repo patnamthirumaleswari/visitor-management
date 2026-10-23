@@ -1,0 +1,12 @@
+{
+  "name": "visitor-management-root",
+  "private": true,
+  "description": "Shortcuts so npm commands also work from the repository root. The app itself lives in visitor_signin/.",
+  "scripts": {
+    "dev": "npm --prefix visitor_signin run dev",
+    "build": "npm --prefix visitor_signin run build",
+    "start": "npm --prefix visitor_signin run start",
+    "typecheck": "npm --prefix visitor_signin run typecheck",
+    "setup": "npm --prefix visitor_signin install"
+  }
+}

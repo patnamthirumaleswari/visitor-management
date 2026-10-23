@@ -38,8 +38,12 @@ function isPastCutoff(signedInAt: string, now: number) {
   return !!cutoff && cutoff.getTime() <= now;
 }
 
+/** When the visit started counting: entry time, or check-in time for a request nobody answered. */
+const startOf = (visit: Visit) => (visit.status === "pending" ? visit.checkedInAt : visit.signedInAt);
+
 function isDue(visit: Visit, now: number) {
-  return visit.status === "signed_in" && !!visit.signedInAt && isPastCutoff(visit.signedInAt, now);
+  const start = startOf(visit);
+  return (visit.status === "signed_in" || visit.status === "pending") && !!start && isPastCutoff(start, now);
 }
 
 function isEmployeeDue(visit: EmployeeVisit, now: number) {
@@ -56,8 +60,9 @@ export function sweepAutoSignOut(): number {
     let count = 0;
     for (const visit of d.visits) {
       if (!isDue(visit, now)) continue;
+      const start = startOf(visit)!; // read before the status changes: it decides which time is used
       visit.status = "signed_out";
-      visit.signedOutAt = autoSignOutTime(visit.signedInAt!)!.toISOString();
+      visit.signedOutAt = autoSignOutTime(start)!.toISOString();
       visit.signedOutBy = "auto";
       count++;
     }

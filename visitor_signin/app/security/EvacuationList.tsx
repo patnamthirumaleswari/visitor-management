@@ -16,11 +16,14 @@ type OnsiteVisit = {
   signedInAt: string;
 };
 
+type WaitingVisitor = { id: string; name: string; company: string; phone: string; host: string; checkedInAt?: string };
+
 type OnsiteEmployee = { id: string; name: string; department: string; phone: string; signedInAt: string };
 
 export default function EvacuationList() {
   const [onsite, setOnsite] = useState<OnsiteVisit[]>([]);
   const [employees, setEmployees] = useState<OnsiteEmployee[]>([]);
+  const [waiting, setWaiting] = useState<WaitingVisitor[]>([]); // at reception, waiting for approval
   const [loaded, setLoaded] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
@@ -35,6 +38,7 @@ export default function EvacuationList() {
       const data = await res.json();
       setOnsite(data.onsite);
       setEmployees(data.employees ?? []);
+      setWaiting(data.waiting ?? []);
       setLoaded(true);
       setUpdatedAt(new Date());
     } catch {
@@ -54,7 +58,7 @@ export default function EvacuationList() {
     <main className="admin stack">
       <div className="row" style={{ alignItems: "flex-start", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 260px" }}>
-          <h1>On site: {onsite.length + employees.length}</h1>
+          <h1>On site: {onsite.length + employees.length + waiting.length}</h1>
           <p style={{ margin: "0 0 4px" }}>{onsite.length} visitors · {employees.length} employees signed in at reception</p>
           <p className="muted small">
             {LOCATION.name}{updatedAt && ` · updated ${time(updatedAt)}`}. Use this list to check everyone is out during an evacuation.
@@ -87,6 +91,27 @@ export default function EvacuationList() {
           </tbody>
         </table>
       </div>
+
+      {waiting.length > 0 && (
+        <>
+          <h2>Waiting at reception: {waiting.length}</h2>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Visitor</th><th>Host</th><th>Arrived</th><th>Phone</th></tr></thead>
+              <tbody>
+                {waiting.map((w) => (
+                  <tr key={w.id}>
+                    <td><strong>{w.name}</strong>{w.company && <div className="muted small">{w.company}</div>}</td>
+                    <td>{w.host}</td>
+                    <td>{w.checkedInAt ? time(w.checkedInAt) : ""}</td>
+                    <td>{w.phone}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <h2>Employees on site: {employees.length}</h2>
       <div className="table-wrap">
