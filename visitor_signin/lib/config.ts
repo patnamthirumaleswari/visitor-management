@@ -36,6 +36,7 @@ export const STARTING_VISITOR_TYPES: Omit<VisitorType, "active">[] = [
   {
     id: "delivery", label: "Delivery", description: "Dropping off a parcel or food", color: "#059669", photoRequired: false, agreementRequired: false,
     fields: { company: "required", email: "hidden", purpose: "hidden" },
+    approvalRequired: false, // couriers drop off at reception; no need to wait for a host
     questions: [
       { id: "q-parcel", label: "What are you delivering?", kind: "select", required: true, options: ["Parcel", "Documents", "Food", "Other"] },
     ],
@@ -71,3 +72,9 @@ export const PIN_LOCK_MINUTES = 5;
 export const REPEAT_SCAN_SECONDS = 60;
 // What an employee's personal QR code contains, followed by their token.
 export const EMPLOYEE_QR_PREFIX = "vms-employee:";
+
+// Host approval (Visitor Connect). A walk-in waits at reception until the host approves entry.
+// If nobody answers within this many minutes, the request is marked escalated and reception is told.
+export const ESCALATE_MINUTES = 5;
+// Visitor numbers start here and count up (shown on the badge and staff lists).
+export const FIRST_VISIT_NO = 101;

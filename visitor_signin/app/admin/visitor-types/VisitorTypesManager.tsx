@@ -166,6 +166,10 @@ export default function VisitorTypesManager({ initialTypes, usage }: Props) {
                   <span>Sign the visitor agreement</span>
                 </label>
                 <label className="check compact">
+                  <input type="checkbox" checked={draft.approvalRequired !== false} onChange={(e) => update({ approvalRequired: e.target.checked })} />
+                  <span title="The visitor waits at reception until their host approves entry.">Host approves entry</span>
+                </label>
+                <label className="check compact">
                   <input type="checkbox" checked={draft.active} onChange={(e) => update({ active: e.target.checked })} />
                   <span title="Untick to hide this type at sign-in. Past visits keep it.">Offer at sign-in</span>
                 </label>
@@ -269,6 +273,7 @@ export default function VisitorTypesManager({ initialTypes, usage }: Props) {
             {t.description && <p className="muted small" style={{ margin: 0 }}>{t.description}</p>}
             <ul className="type-facts small">
               <li>{t.photoRequired ? "Photo" : "No photo"} · {t.agreementRequired ? "Agreement" : "No agreement"}</li>
+              <li>{t.approvalRequired === false ? "Goes straight in" : "Host approves entry"}</li>
               <li>{t.questions.length === 0 ? "No extra questions" : `${t.questions.length} extra ${t.questions.length === 1 ? "question" : "questions"}`}</li>
               <li className="muted">{usage[t.id] ?? 0} visits</li>
             </ul>

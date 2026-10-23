@@ -22,6 +22,7 @@ export async function GET() {
         const host = d.hosts.find((h) => h.id === v.hostId);
         return {
           id: v.id,
+          no: v.no,
           name: visitor?.name ?? "",
           company: visitor?.company ?? "",
           phone: visitor?.phone ?? "",
@@ -34,7 +35,7 @@ export async function GET() {
           signedInAt: v.signedInAt,
           // How the host was told (FR-NOT-01); records from before invitations count as arrivals.
           notified: d.notifications
-            .filter((n) => n.visitId === v.id && (n.kind ?? "arrival") === "arrival")
+            .filter((n) => n.visitId === v.id && ["arrival", "approval"].includes(n.kind ?? "arrival"))
             .map(({ channel, status }) => ({ channel, status })),
         };
       }),
@@ -59,7 +60,24 @@ export async function GET() {
       }),
   );
 
-  return NextResponse.json({ onsite, employees });
+  // Visitors waiting at reception for approval are inside the building too (evacuation list).
+  const waiting = read((d) =>
+    d.visits
+      .filter((v) => v.status === "pending")
+      .map((v) => {
+        const visitor = d.visitors.find((p) => p.id === v.visitorId);
+        return {
+          id: v.id,
+          name: visitor?.name ?? "",
+          company: visitor?.company ?? "",
+          phone: visitor?.phone ?? "",
+          host: d.hosts.find((h) => h.id === v.hostId)?.name ?? "",
+          checkedInAt: v.checkedInAt,
+        };
+      }),
+  );
+
+  return NextResponse.json({ onsite, employees, waiting });
 }
 
 /** Label and colour of the visit's type, so the page doesn't need its own copy of the types. */

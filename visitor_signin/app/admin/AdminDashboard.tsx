@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Icon, { type IconName } from "../Icon";
+import RequestList from "../RequestList";
+import type { RequestRow } from "@/lib/requests";
 
 type OnsiteVisit = {
   id: string;
+  no?: number;
   name: string;
   company: string;
   phone: string;
@@ -45,13 +48,15 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
   const [onsite, setOnsite] = useState<OnsiteVisit[]>([]);
   const [employees, setEmployees] = useState<OnsiteEmployee[]>([]);
   const [expected, setExpected] = useState<ExpectedVisit[]>([]);
+  const [pending, setPending] = useState<RequestRow[]>([]); // waiting for approval (Visitor Connect)
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [onsiteRes, expectedRes] = await Promise.all([
+      const [onsiteRes, expectedRes, requestsRes] = await Promise.all([
         fetch("/api/admin/onsite", { cache: "no-store" }),
         fetch("/api/admin/expected", { cache: "no-store" }),
+        fetch("/api/staff/requests", { cache: "no-store" }),
       ]);
       // Logged out (session ended after 8 h, or logged out in another tab): back to the login page.
       if (onsiteRes.status === 401 || expectedRes.status === 401) {
@@ -63,6 +68,7 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
       setOnsite(onsiteData.onsite);
       setEmployees(onsiteData.employees ?? []);
       setExpected((await expectedRes.json()).expected);
+      if (requestsRes.ok) setPending((await requestsRes.json()).pending);
       setLoaded(true);
     } catch {
       /* keep showing the last list */
@@ -89,7 +95,6 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
   const time = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const failed = onsite.filter((v) => (v.notified ?? []).some((n) => n.status === "failed")).length;
 
   // Dashboard layout from the Visitor Connect design: number tiles, then panels of visitor rows.
   return (
@@ -103,11 +108,19 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
       </div>
 
       <div className="tiles">
+        <div className={`tile${pending.length ? " hot" : ""}`}><span className="ti"><Icon name="bell" /></span><b>{pending.length}</b><span>Need an answer</span></div>
         <div className="tile gold"><span className="ti"><Icon name="users" /></span><b>{onsite.length}</b><span>Visitors on site</span></div>
         <div className="tile"><span className="ti"><Icon name="badge" /></span><b>{employees.length}</b><span>Employees in</span></div>
         <div className="tile"><span className="ti"><Icon name="clock" /></span><b>{expected.length}</b><span>Expected today</span></div>
-        <div className={`tile${failed ? " hot" : ""}`}><span className="ti"><Icon name="bell" /></span><b>{failed}</b><span>Host alerts failed</span></div>
       </div>
+
+      {/* Visitors at reception waiting for their host to approve entry; admins and reception can answer too */}
+      {pending.length > 0 && (
+        <section className="panel" style={{ marginBottom: 16 }}>
+          <div className="panel-h"><h3>Waiting at reception for approval</h3><span className="count">{pending.length}</span></div>
+          <RequestList rows={pending} onDecided={load} showHost />
+        </section>
+      )}
 
       <div className="cols two">
         <section className="panel">
@@ -124,6 +137,7 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
                   </div>
                   <div className="meta">{v.company ? `${v.company} · ` : ""}for {v.host} · {v.phone}</div>
                   <div className="chips">
+                    {v.no && <span className="tag mono">No. {v.no}</span>}
                     <span><Icon name="clock" /> in {time(v.signedInAt)} via {v.source}</span>
                     <NotifiedLine notified={v.notified ?? []} />
                   </div>

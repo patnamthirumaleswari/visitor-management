@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { AGREEMENT } from "@/lib/config";
 import { newId, normalizePhone, write, type Host, type StandardField, type Visit, type Visitor, type VisitorType } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
-import { notifyHost } from "@/lib/notify";
+import { addEvent, isOpen, needsApproval, newNumberAndCode } from "@/lib/approvals";
+import { notifyHost, notifyHostApproval } from "@/lib/notify";
 import { getSignInSession, SESSION_COOKIE } from "@/lib/session";
 import { randomToken, type TokenPayload } from "@/lib/token";
 import { checkAnswers, fieldMode, findVisitorType, getActiveVisitorTypes, STANDARD_FIELDS } from "@/lib/visitorTypes";
@@ -70,14 +71,19 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
 
     const now = new Date().toISOString();
     if (isImageDataUrl(body.photo)) match.visitor.photo = body.photo;
+    // The host invited them, so there's nothing to approve: they go straight in.
     Object.assign(match.visit, {
       status: "signed_in",
       source: "qr",
+      ...newNumberAndCode(d),
+      checkedInAt: now,
       signedInAt: now,
       ...agreementFields(type, body),
       ...(checked.answers.length ? { answers: checked.answers } : {}),
     } satisfies Partial<Visit>);
     match.invitation.usedAt = now;
+    addEvent(match.visit, "Checked in with an invitation", "Visitor (own phone)", now);
+    addEvent(match.visit, "Entry approved (invited by host)", match.host.name, now);
     d.usedSessions.push(session.n);
     return { host: match.host, visitor: match.visitor, visit: match.visit };
   });
@@ -115,6 +121,10 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
     if (!host) return { error: "Choose who you are visiting.", status: 400 };
 
     let visitor = d.visitors.find((v) => v.phone === phone);
+    // One open visit per phone, so a second scan doesn't create a duplicate request.
+    if (visitor && d.visits.some((v) => v.visitorId === visitor!.id && isOpen(v))) {
+      return { error: "This mobile number already has an open visit. Use \"Find my visit\" with your visit code.", status: 409 };
+    }
     if (visitor) {
       Object.assign(visitor, { name, email: email || visitor.email, company: company || visitor.company });
     } else {
@@ -123,6 +133,9 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
     }
     if (isImageDataUrl(body.photo)) visitor.photo = body.photo;
 
+    // Walk-ins wait at reception until the host approves, unless their type doesn't need approval.
+    const now = new Date().toISOString();
+    const approval = needsApproval(type);
     const visit: Visit = {
       id: newId(),
       visitorId: visitor.id,
@@ -130,13 +143,17 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
       locationId: session.d,
       visitorType: type.id,
       purpose,
-      status: "signed_in",
+      status: approval ? "pending" : "signed_in",
       source: "qr",
-      signedInAt: new Date().toISOString(),
+      ...newNumberAndCode(d),
+      checkedInAt: now,
+      ...(approval ? {} : { signedInAt: now }),
       badgeToken: randomToken(),
       ...agreementFields(type, body),
       ...(checked.answers.length ? { answers: checked.answers } : {}),
     };
+    addEvent(visit, "Checked in by QR code", "Visitor (own phone)", now);
+    if (!approval) addEvent(visit, `Entry started (${type.label}: no approval needed)`, "System", now);
     d.visits.push(visit);
     d.usedSessions.push(session.n);
     return { host, visitor, visit };
@@ -159,7 +176,8 @@ async function finish({ host, visitor, visit }: { host: Host; visitor: Visitor; 
   (await cookies()).delete(SESSION_COOKIE);
 
   // Runs after the response is sent, so the visitor never waits on email/SMS delivery.
-  after(() => notifyHost(host, visitor, visit));
+  // A waiting visitor sends the host an Approve / Deny request; otherwise a plain "has arrived".
+  after(() => (visit.status === "pending" ? notifyHostApproval(host, visitor, visit) : notifyHost(host, visitor, visit)));
 
   return NextResponse.json({ id: visit.id, badgeToken: visit.badgeToken }, { status: 201 });
 }

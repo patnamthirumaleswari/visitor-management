@@ -27,12 +27,13 @@ export const ACCESS = {
   security: ["admin", "receptionist", "security"], // /security
   account: ["admin", "receptionist", "host", "security"], // /account: own notification settings
   branding: ["admin"], // /admin/branding: logo, colour, company name, welcome text
+  decide: ["admin", "receptionist", "host"], // approve / deny entry: hosts for their own visitors only
   visitorTypes: ["admin"], // /admin/visitor-types: types, their fields and questions, photo on/off
 } satisfies Record<string, StaffRole[]>;
 
 /** Where each role lands after logging in. */
 export function homeFor(role: StaffRole): string {
-  if (role === "host") return "/pre-register";
+  if (role === "host") return "/requests";
   if (role === "security") return "/security";
   return "/admin";
 }

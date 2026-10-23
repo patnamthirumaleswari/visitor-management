@@ -119,6 +119,7 @@ export function cleanVisitorType(raw: unknown, id: string): { type: VisitorType 
       fields,
       photoRequired: body.photoRequired === true,
       agreementRequired: body.agreementRequired === true,
+      approvalRequired: body.approvalRequired !== false, // host approves entry unless switched off
       questions,
       active: body.active !== false,
     },

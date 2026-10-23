@@ -1,7 +1,10 @@
 import { newId, read, write, type Host, type Notification, type NotificationChannel, type Visit, type Visitor } from "./db";
 import { escapeHtml, sendEmail, sendSms, type SendResult } from "./channels";
 import { LOCATION } from "./config";
+import { publicBaseUrl } from "./baseUrl";
+import { ESCALATE_MINUTES } from "./config";
 import { formatDay } from "./dates";
+import { makeToken } from "./token";
 import { getBranding } from "./branding";
 import { typeDisplay } from "./visitorTypes";
 
@@ -64,6 +67,78 @@ export async function notifyHost(host: Host, visitor: Visitor, visit: Visit) {
           inlineImage: photo,
         }),
       );
+    }),
+  );
+}
+
+// The Approve / Deny link in the host's message works for a day, and only for that visit and host.
+const DECISION_LINK_SECONDS = 24 * 60 * 60;
+
+/** The link that opens the one-tap Approve / Deny page for this visit (no sign-in needed). */
+export function decisionLink(visit: Visit): string {
+  return `${publicBaseUrl()}/approve/${makeToken("decision", DECISION_LINK_SECONDS, `${visit.id}:${visit.hostId}`)}`;
+}
+
+/**
+ * A walk-in is waiting at reception (Visitor Connect host approval): the host gets the visitor's
+ * details and an Approve / Deny link, by email, SMS or both as they chose (FR-NOT-06).
+ */
+export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Visit) {
+  const channels: NotificationChannel[] = host.notifyBy?.length ? host.notifyBy : ["email"];
+  const who = `${visitor.name}${visitor.company ? ` (${visitor.company})` : ""}`;
+  const type = read((d) => typeDisplay(d, visit.visitorType).label);
+  const link = decisionLink(visit);
+  const answers: Array<[string, string]> = (visit.answers ?? []).map((a) => [a.label, a.value]);
+  const record = { kind: "approval", visitId: visit.id, hostId: host.id } as const;
+
+  await Promise.all(
+    channels.map((channel) => {
+      if (channel === "sms") {
+        return deliver({ ...record, channel, to: host.phone }, () =>
+          sendSms(host.phone, `${who} is waiting at ${LOCATION.name} reception to see you (${type}). Approve or deny: ${link}`),
+        );
+      }
+      const photo = visitor.photo ? { dataUrl: visitor.photo, contentId: "visitor-photo" } : undefined;
+      return deliver({ ...record, channel, to: host.email }, () =>
+        sendEmail({
+          to: host.email,
+          subject: `${visitor.name} is waiting at reception`,
+          text: [
+            `${who} is waiting at ${LOCATION.name} reception to see you.`,
+            "",
+            `Type: ${type}`,
+            `Phone: ${visitor.phone}`,
+            `Visitor no. ${visit.no ?? ""}`,
+            ...answers.map(([q, a]) => `${q} ${a}`),
+            "",
+            `Approve or deny entry: ${link}`,
+            `If you don't answer within ${ESCALATE_MINUTES} minutes, reception is told.`,
+          ].join("\n"),
+          html: emailLayout(`
+            <h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} is waiting at reception</h2>
+            ${photo ? `<img src="cid:${photo.contentId}" alt="" width="120" height="120" style="border-radius:30%;object-fit:cover;display:block;margin:0 0 16px">` : ""}
+            ${detailsTable([["Visitor", who], ["Type", type], ["Phone", visitor.phone], ["Visitor no.", String(visit.no ?? "")], ...answers])}
+            <p style="margin:20px 0">
+              <a href="${escapeHtml(link)}" style="background:#059669;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700">Approve or deny</a>
+            </p>
+            <p style="margin:0;color:#6b7280">If you don't answer within ${ESCALATE_MINUTES} minutes, reception is told.</p>`),
+          inlineImage: photo,
+        }),
+      );
+    }),
+  );
+}
+
+/** Nobody answered in time: tell reception (RECEPTION_EMAIL in .env.local), or log it. */
+export async function notifyReceptionEscalated(visit: Visit, visitorName: string, hostName: string) {
+  const to = process.env.RECEPTION_EMAIL?.trim() || "reception (RECEPTION_EMAIL not set)";
+  const text = `${visitorName} (visitor no. ${visit.no ?? ""}) has waited ${ESCALATE_MINUTES}+ minutes for ${hostName} to approve entry. Approve or deny: ${decisionLink(visit)}`;
+  return deliver({ kind: "escalation", visitId: visit.id, channel: "email", to }, () =>
+    sendEmail({
+      to: process.env.RECEPTION_EMAIL?.trim() || "reception@localhost",
+      subject: `Escalated: ${visitorName} is still waiting`,
+      text,
+      html: emailLayout(`<h2 style="margin:0 0 12px">${escapeHtml(visitorName)} is still waiting</h2><p>${escapeHtml(text)}</p>`),
     }),
   );
 }

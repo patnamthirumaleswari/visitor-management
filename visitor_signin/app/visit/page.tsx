@@ -21,6 +21,7 @@ export default async function VisitPage({ searchParams }: { searchParams: Promis
             Please scan the code on the reception screen again.
           </p>
           <ExistingBadgeLink />
+          <a className="button secondary" href="/find">Already checked in? Find my visit</a>
         </div>
       </main>
     );

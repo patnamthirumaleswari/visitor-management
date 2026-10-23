@@ -416,3 +416,18 @@ label.check.compact input { width: 18px; height: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ───────── Host approval (Visitor Connect) ───────── */
+.decide { display: grid; gap: 8px; margin-top: 10px; }
+.decide-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.decide-row .btn.lg { flex: 1; }
+.decide-deny { display: grid; gap: 8px; }
+.wait { font-weight: 700; color: var(--warn); display: inline-flex; align-items: center; gap: 4px; }
+.vcard { border-radius: 22px; overflow: hidden; }
+.vcard .who { display: flex; gap: 14px; align-items: center; padding: 14px; }
+.vcard .nums { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line-2); }
+.vcard .nums > div { padding: 10px 14px; } .vcard .nums > div + div { border-left: 1px solid var(--line-2); text-align: right; }
+.vcard .nums small { display: block; font-size: 12px; color: var(--muted); font-weight: 600; }
+.vcard .nums b { font: 800 24px var(--f-mono); letter-spacing: .04em; }
+.status.pop { animation: pop .5s ease-out; } @keyframes pop { 0% { transform: scale(.96); } 60% { transform: scale(1.02); } }
+.find-code { font-size: 26px; letter-spacing: .35em; text-align: center; font-family: var(--f-mono); }
