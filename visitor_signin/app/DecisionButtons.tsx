@@ -7,13 +7,23 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Icon from "./Icon";
 
+type Labels = { approve: string; deny: string; confirmDeny: string; notePlaceholder: string };
+
+const ENTRY: Labels = {
+  approve: "Approve",
+  deny: "Deny",
+  confirmDeny: "Don't approve",
+  notePlaceholder: "Note for the visitor (optional), e.g. Please come back after 3 pm",
+};
+
 type Props = {
   endpoint: string; // POST { decision, note }
   onDone?: () => void; // default: refresh the page
   size?: "sm" | "lg";
+  labels?: Labels; // default: entry approval wording; checkout uses "Approve checkout" / "Not yet"
 };
 
-export default function DecisionButtons({ endpoint, onDone, size = "sm" }: Props) {
+export default function DecisionButtons({ endpoint, onDone, size = "sm", labels = ENTRY }: Props) {
   const router = useRouter();
   const [denying, setDenying] = useState(false);
   const [note, setNote] = useState("");
@@ -50,21 +60,21 @@ export default function DecisionButtons({ endpoint, onDone, size = "sm" }: Props
         <div className="decide-deny">
           <input
             aria-label="Note for the visitor (optional)"
-            placeholder="Note for the visitor (optional), e.g. Please come back after 3 pm"
+            placeholder={labels.notePlaceholder}
             value={note}
             maxLength={200}
             onChange={(e) => setNote(e.target.value)}
             autoFocus
           />
           <div className="decide-row">
-            <button type="button" className={`${cls} danger`} onClick={() => send("deny")} disabled={busy}><Icon name="x" />Don&apos;t approve</button>
+            <button type="button" className={`${cls} danger`} onClick={() => send("deny")} disabled={busy}><Icon name="x" />{labels.confirmDeny}</button>
             <button type="button" className={`${cls} line`} onClick={() => setDenying(false)} disabled={busy}>Back</button>
           </div>
         </div>
       ) : (
         <div className="decide-row">
-          <button type="button" className={`${cls} ok`} onClick={() => send("approve")} disabled={busy}><Icon name="check" />Approve</button>
-          <button type="button" className={`${cls} line`} onClick={() => setDenying(true)} disabled={busy}><Icon name="x" />Deny</button>
+          <button type="button" className={`${cls} ok`} onClick={() => send("approve")} disabled={busy}><Icon name="check" />{labels.approve}</button>
+          <button type="button" className={`${cls} line`} onClick={() => setDenying(true)} disabled={busy}><Icon name="x" />{labels.deny}</button>
         </div>
       )}
       {error && <p className="errmsg" role="alert" style={{ margin: 0 }}><Icon name="alert" />{error}</p>}

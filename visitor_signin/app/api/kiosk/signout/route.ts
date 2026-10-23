@@ -1,6 +1,9 @@
 import crypto from "node:crypto";
-import { NextResponse } from "next/server";
-import { write } from "@/lib/db";
+import { after, NextResponse } from "next/server";
+import { requestCheckout } from "@/lib/approvals";
+import { notifyHostCheckout } from "@/lib/notify";
+import { findVisitorType } from "@/lib/visitorTypes";
+import { write, type Visit } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -35,16 +38,18 @@ export async function POST(req: Request) {
     if (!visit || (token !== undefined && !safeEqual(visit.badgeToken, token))) return { error: "We couldn't find that visit." } as const;
     const visitor = d.visitors.find((p) => p.id === visit.visitorId);
     const firstName = visitor?.name.split(" ")[0] ?? "";
-    if (visit.status !== "signed_in") return { firstName, already: true } as const;
-
-    visit.status = "signed_out";
-    visit.signedOutAt = new Date().toISOString();
-    visit.signedOutBy = "kiosk";
-    return { firstName, already: false } as const;
+    // Visitor Connect: leaving goes through the host's confirmation and security at the gate.
+    if (visit.status !== "signed_in") return { firstName, already: true, next: visit.status } as const;
+    requestCheckout(visit, findVisitorType(d, visit.visitorType) ?? {}, "Visitor (reception screen)");
+    const next = visit.status as Visit["status"]; // changed by requestCheckout: "checkout", or "gate" if no approval is needed
+    const host = d.hosts.find((h) => h.id === visit.hostId);
+    return { firstName, already: false, next, notify: next === "checkout" && host && visitor ? { host, visitor, visit: { ...visit } } : null } as const;
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 404 });
-  return NextResponse.json(result);
+  const n = "notify" in result ? result.notify : null;
+  if (n) after(() => notifyHostCheckout(n.host, n.visitor, n.visit));
+  return NextResponse.json({ firstName: result.firstName, already: result.already, next: result.next });
 }
 
 function parseBadgeQr(text: string): { visitId: string; token: string } | null {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
+import { isOnSite } from "@/lib/approvals";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { read, type Data } from "@/lib/db";
 import { typeDisplay } from "@/lib/visitorTypes";
@@ -15,7 +16,7 @@ export async function GET() {
 
   const onsite = read((d) =>
     d.visits
-      .filter((v) => v.status === "signed_in")
+      .filter(isOnSite) // inside: on site, checking out, or at the gate
       .sort((a, b) => (b.signedInAt ?? "").localeCompare(a.signedInAt ?? ""))
       .map((v) => {
         const visitor = d.visitors.find((p) => p.id === v.visitorId);
@@ -23,6 +24,7 @@ export async function GET() {
         return {
           id: v.id,
           no: v.no,
+          status: v.status,
           name: visitor?.name ?? "",
           company: visitor?.company ?? "",
           phone: visitor?.phone ?? "",

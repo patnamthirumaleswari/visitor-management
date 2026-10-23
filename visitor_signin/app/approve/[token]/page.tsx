@@ -71,6 +71,18 @@ export default async function ApprovePage({ params }: { params: Promise<{ token:
                 <p style={{ margin: 0 }}>is waiting at reception to see <b>{data.host?.name}</b>. Let them in?</p>
                 <DecisionButtons endpoint={`/api/approve/${token}`} size="lg" />
               </>
+            ) : data.visit.status === "checkout" ? (
+              <>
+                <p style={{ margin: 0 }}>wants to check out. Is the visit with <b>{data.host?.name}</b> finished?</p>
+                <DecisionButtons endpoint={`/api/approve/${token}`} size="lg"
+                  labels={{ approve: "Approve checkout", deny: "Not yet", confirmDeny: "Keep them on site", notePlaceholder: "Note for the visitor (optional)" }} />
+              </>
+            ) : ['gate', 'hold', 'signed_out'].includes(data.visit.status) && data.visit.checkoutRequestedAt ? (
+              <div className="status s-gate">
+                <Icon name="door" className="big" />
+                <h1>Checkout approved</h1>
+                <p>{data.visit.status === "signed_out" ? "They have left." : "Security will let them out at the gate."}</p>
+              </div>
             ) : (
               <div className={`status ${data.visit.status === "denied" ? "s-bad" : "s-ok"}`}>
                 <Icon name={data.visit.status === "denied" ? "x" : "shieldCheck"} className="big" />

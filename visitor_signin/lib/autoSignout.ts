@@ -43,7 +43,8 @@ const startOf = (visit: Visit) => (visit.status === "pending" ? visit.checkedInA
 
 function isDue(visit: Visit, now: number) {
   const start = startOf(visit);
-  return (visit.status === "signed_in" || visit.status === "pending") && !!start && isPastCutoff(start, now);
+  const open = ["signed_in", "pending", "checkout", "gate", "hold"].includes(visit.status);
+  return open && !!start && isPastCutoff(start, now);
 }
 
 function isEmployeeDue(visit: EmployeeVisit, now: number) {

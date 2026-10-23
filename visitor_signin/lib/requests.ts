@@ -27,6 +27,9 @@ export type RequestRow = {
   escalated: boolean;
   decidedBy?: string;
   decisionNote?: string;
+  checkoutRequestedAt?: string;
+  checkoutNote?: string;
+  holdReason?: string;
 };
 
 export function toRow(d: Data, v: Visit): RequestRow {
@@ -51,15 +54,26 @@ export function toRow(d: Data, v: Visit): RequestRow {
     escalated: !!v.escalated,
     decidedBy: v.decidedBy,
     decisionNote: v.decisionNote,
+    checkoutRequestedAt: v.checkoutRequestedAt,
+    checkoutNote: v.checkoutNote,
+    holdReason: v.hold?.reason,
+    // while checking out, "waiting" counts from the checkout request
+    ...(v.status === "checkout" ? { waitingMinutes: minutesSince(v.checkoutRequestedAt), escalated: !!v.checkoutEscalated } : {}),
   };
 }
 
-/** Waiting visitors this person can answer: a host's own, or everyone's for admin and reception. Oldest first. */
+const NEEDS_ANSWER: Visit["status"][] = ["pending", "checkout", "hold"];
+
+/**
+ * Everything this person can answer: entry requests, checkout requests and gate holds.
+ * A host sees their own visitors; admins and reception see everyone's. Oldest first.
+ */
 export function pendingFor(staff: Staff): RequestRow[] {
+  const since = (v: Visit) => (v.status === "pending" ? v.checkedInAt : v.status === "hold" ? v.hold?.at : v.checkoutRequestedAt) ?? "";
   return read((d) =>
     d.visits
-      .filter((v) => v.status === "pending" && (staff.role !== "host" || v.hostId === staff.hostId))
-      .sort((a, b) => (a.checkedInAt ?? "").localeCompare(b.checkedInAt ?? ""))
+      .filter((v) => NEEDS_ANSWER.includes(v.status) && (staff.role !== "host" || v.hostId === staff.hostId))
+      .sort((a, b) => since(a).localeCompare(since(b)))
       .map((v) => toRow(d, v)),
   );
 }
@@ -70,7 +84,7 @@ export function todayForHost(hostId: string): RequestRow[] {
   const dayOf = (iso?: string) => (iso ? new Intl.DateTimeFormat("en-CA", { timeZone: LOCATION.timezone }).format(new Date(iso)) : "");
   return read((d) =>
     d.visits
-      .filter((v) => v.hostId === hostId && v.status !== "pending" && dayOf(v.checkedInAt ?? v.signedInAt) === today)
+      .filter((v) => v.hostId === hostId && !NEEDS_ANSWER.includes(v.status) && dayOf(v.checkedInAt ?? v.signedInAt) === today)
       .sort((a, b) => (b.checkedInAt ?? b.signedInAt ?? "").localeCompare(a.checkedInAt ?? a.signedInAt ?? ""))
       .map((v) => toRow(d, v)),
   );

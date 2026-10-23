@@ -86,7 +86,10 @@ export type Visit = {
   // pending  = at reception, waiting for the host to approve entry (Visitor Connect)
   // signed_in = on site (approved, or invited, or a type that needs no approval)
   // denied   = the host or an admin did not approve entry
-  status: "expected" | "pending" | "signed_in" | "denied" | "signed_out";
+  // checkout = the visitor asked to leave; waiting for the host to confirm the visit is finished
+  // gate     = cleared to leave; security checks the photo at the gate and releases them
+  // hold     = security is holding them at the gate (reason in `hold`); the host or an admin clears it
+  status: "expected" | "pending" | "signed_in" | "denied" | "checkout" | "gate" | "hold" | "signed_out";
   source: "qr" | "kiosk" | "portal";
   expectedDate?: string; // YYYY-MM-DD, for pre-registered visits
   no?: number; // visitor number, counting up at the location (101, 102, …)
@@ -97,11 +100,15 @@ export type Visit = {
   decidedBy?: string; // name of who approved or denied, e.g. "Priya Nair (from email)"
   decisionNote?: string; // optional note shown to the visitor when entry isn't approved
   escalated?: boolean; // the host didn't answer in time and reception was told
+  checkoutRequestedAt?: string;
+  checkoutEscalated?: boolean; // nobody confirmed the checkout in time and reception was told
+  checkoutNote?: string; // why the host said "not yet", shown to the visitor
+  hold?: { reason: string; by: string; at: string }; // why security is holding them at the gate
   timeline?: TimelineEvent[]; // what happened, in order; becomes the gate pass record in Stage 3
   signedOutAt?: string;
   // How they signed out (FR-KIO-10): badge on their phone, reception screen, staff portal, or the
   // automatic end-of-day sign-out. Missing on visits signed out before this was recorded.
-  signedOutBy?: "badge" | "kiosk" | "portal" | "auto";
+  signedOutBy?: "badge" | "kiosk" | "portal" | "auto" | "gate"; // "gate" = released by security
   badgeToken: string;
   agreementVersion?: string;
   signature?: string; // data URL of the finger signature
@@ -111,7 +118,7 @@ export type Visit = {
 // One message sent (or attempted). "logged" = provider not configured, printed to the console instead.
 export type Notification = {
   id: string;
-  kind?: "arrival" | "invitation" | "approval" | "escalation"; // missing on records from before invitations were sent
+  kind?: "arrival" | "invitation" | "approval" | "escalation" | "checkout" | "hold"; // missing on records from before invitations were sent
   visitId: string;
   hostId?: string;
   to: string;

@@ -5,7 +5,7 @@ import LoginForm from "./LoginForm";
 
 export const dynamic = "force-dynamic";
 
-const TITLES: Record<string, string> = { host: "Employee sign in", security: "Security sign in", admin: "Admin sign in" };
+const TITLES: Record<string, string> = { host: "Employee (host) sign in", security: "Security sign in", admin: "Admin sign in" };
 
 // Starting accounts from lib/db.ts, shown as tap-to-fill chips while developing only (never in production).
 const DEV_ACCOUNTS: Record<string, Array<[string, string]>> = {

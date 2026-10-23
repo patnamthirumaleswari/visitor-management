@@ -1,5 +1,6 @@
 import Icon from "./Icon";
 import Logo from "./Logo";
+import { isOnSite } from "@/lib/approvals";
 import { getBranding } from "@/lib/branding";
 import { LOCATION } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
@@ -16,14 +17,14 @@ export default function Home() {
     iso ? new Intl.DateTimeFormat("en-CA", { timeZone: LOCATION.timezone }).format(new Date(iso)) : "";
 
   const stats = read((d) => ({
-    onSite: d.visits.filter((v) => v.status === "signed_in").length,
+    onSite: d.visits.filter(isOnSite).length,
     today: d.visits.filter((v) => dayOf(v.signedInAt) === today).length,
     expected: d.visits.filter((v) => v.status === "expected" && v.expectedDate === today).length,
   }));
 
   const roles = [
-    { href: "/login?role=host", icon: "users" as const, label: "Employee", hint: "Invite your visitors" },
-    { href: "/login?role=security", icon: "door" as const, label: "Security", hint: "Who is on site" },
+    { href: "/login?role=host", icon: "users" as const, label: "Employee", hint: "Hosts: approve your visitors" },
+    { href: "/login?role=security", icon: "door" as const, label: "Security", hint: "Release at the gate" },
     { href: "/login?role=admin", icon: "shield" as const, label: "Admin", hint: "Reports and settings" },
   ];
 
@@ -48,7 +49,7 @@ export default function Home() {
         <div className="land-card">
           <a className="btn primary lg full" href="/kiosk"><Icon name="qr" />Visitor check-in</a>
           <p className="hint">Visitors scan the QR code on the reception screen with their phone camera.</p>
-          <a className="btn line full" href="/kiosk/staff"><Icon name="badge" />Employee sign in / out at reception</a>
+          <a className="btn line full" href="/kiosk/staff"><Icon name="clock" />Staff attendance at reception (clock in / out)</a>
           <div className="or">Staff sign in</div>
           <div className="rolegrid">
             {roles.map((r) => (

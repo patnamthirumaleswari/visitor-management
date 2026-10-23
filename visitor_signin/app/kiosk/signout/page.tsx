@@ -22,7 +22,8 @@ export default function VisitorSignOut() {
   const [chosen, setChosen] = useState<Match | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<{ firstName: string; already: boolean } | null>(null);
+  // next = the visit's status afterwards: "checkout" (host confirms), "gate" (go to the gate), or another state if already leaving
+  const [done, setDone] = useState<{ firstName: string; already: boolean; next?: string } | null>(null);
   const [lastTouch, setLastTouch] = useState(() => Date.now());
 
   // Name search as you type.
@@ -118,11 +119,11 @@ export default function VisitorSignOut() {
 
         {step === "confirm" && chosen && (
           <>
-            <h1>Sign out {chosen.name}?</h1>
+            <h1>Check out {chosen.name}?</h1>
             <p className="muted" style={{ margin: 0 }}>Visiting {chosen.host}</p>
             {error && <p className="error" role="alert">{error}</p>}
             <button className="danger" onClick={() => signOut({ visitId: chosen.id })} disabled={busy}>
-              {busy ? "Signing out…" : "Yes, sign me out"}
+              {busy ? "Checking out…" : "Yes, I'm leaving"}
             </button>
             <button className="secondary" onClick={startOver}>That&apos;s not me</button>
           </>
@@ -140,8 +141,14 @@ export default function VisitorSignOut() {
 
         {step === "done" && done && (
           <div className="stack" style={{ textAlign: "center" }} role="status">
-            <h1>Goodbye, {done.firstName}</h1>
-            <p>{done.already ? "You were already signed out." : "You're signed out. Thanks for visiting!"}</p>
+            <h1>{done.next === "gate" ? `Go to the exit gate, ${done.firstName}` : `Thanks, ${done.firstName}`}</h1>
+            <p>
+              {done.next === "checkout" && "Your host has been asked to confirm your visit is finished. Your phone will tell you when to go to the exit gate."}
+              {done.next === "gate" && "Show your visit screen or badge to security at the gate. They check your photo and let you out."}
+              {done.next === "hold" && "Please wait at the gate. Security will help you shortly."}
+              {done.next === "signed_out" && "You're already signed out. Thanks for visiting!"}
+              {done.next === "pending" && "You're still waiting for your host to approve your visit. Please ask reception."}
+            </p>
             <a className="button" href="/kiosk">Done</a>
           </div>
         )}
