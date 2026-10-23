@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { ESCALATE_MINUTES, FIRST_VISIT_NO } from "./config";
+import { ESCALATE_MINUTES, FIRST_VISIT_NO, LOCATION } from "./config";
 import { read, write, type Data, type Visit, type VisitorType } from "./db";
 import type { Staff } from "./auth";
 
@@ -67,6 +67,43 @@ export function decide(visit: Visit, decision: Decision, by: string, note = ""):
     if (note) visit.decisionNote = note.slice(0, 200);
     addEvent(visit, "Entry not approved", by, now);
   }
+  return null;
+}
+
+// ───────── Changing your mind: approve a denied visitor after all ─────────
+
+const dayAtLocation = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: LOCATION.timezone }).format(new Date(iso));
+
+/**
+ * Whether a denied visit can still be approved: denied today (they may still be at reception), and the
+ * visitor hasn't checked in again since (then the newer request is the one to answer).
+ */
+export function reapproveProblem(d: Data, visit: Visit): string | null {
+  if (visit.status !== "denied") return "Only a visit that wasn't approved can be approved after all.";
+  if (!visit.decidedAt || dayAtLocation(visit.decidedAt) !== dayAtLocation(new Date().toISOString())) {
+    return "This was not approved on an earlier day. Ask them to check in again.";
+  }
+  if (d.visits.some((v) => v.id !== visit.id && v.visitorId === visit.visitorId && isOpen(v))) {
+    return "They have checked in again. Answer their newer request instead.";
+  }
+  return null;
+}
+
+/** The visitor's host, reception or an admin may change the answer. */
+export const canReapprove = (staff: Staff, visit: Visit) =>
+  visit.status === "denied" && (staff.role === "admin" || staff.role === "receptionist" || (staff.role === "host" && staff.hostId === visit.hostId));
+
+/** Lets a denied visitor in after all. Runs inside write(). */
+export function reapprove(d: Data, visit: Visit, by: string): string | null {
+  const problem = reapproveProblem(d, visit);
+  if (problem) return problem;
+  const now = new Date().toISOString();
+  visit.status = "signed_in";
+  visit.signedInAt = now;
+  visit.decidedAt = now;
+  visit.decidedBy = by;
+  delete visit.decisionNote;
+  addEvent(visit, "Entry approved after all (changed from not approved)", by, now);
   return null;
 }
 

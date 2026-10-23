@@ -1,4 +1,4 @@
-import { minutesSince, sweepEscalations } from "./approvals";
+import { minutesSince, reapproveProblem, sweepEscalations } from "./approvals";
 import type { Staff } from "./auth";
 import { todayAtLocation } from "./dates";
 import { LOCATION } from "./config";
@@ -30,6 +30,7 @@ export type RequestRow = {
   checkoutRequestedAt?: string;
   checkoutNote?: string;
   holdReason?: string;
+  reapprovable: boolean; // denied today and not checked in again: the host can approve after all
 };
 
 export function toRow(d: Data, v: Visit): RequestRow {
@@ -57,6 +58,7 @@ export function toRow(d: Data, v: Visit): RequestRow {
     checkoutRequestedAt: v.checkoutRequestedAt,
     checkoutNote: v.checkoutNote,
     holdReason: v.hold?.reason,
+    reapprovable: v.status === "denied" && reapproveProblem(d, v) === null,
     // while checking out, "waiting" counts from the checkout request
     ...(v.status === "checkout" ? { waitingMinutes: minutesSince(v.checkoutRequestedAt), escalated: !!v.checkoutEscalated } : {}),
   };

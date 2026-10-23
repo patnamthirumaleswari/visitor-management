@@ -207,6 +207,19 @@ On site -> visitor taps "Check out" (phone, or "Signing out?" at reception)
 - Staff "Sign out" on `/admin` and the 8 pm automatic sign-out still end a visit straight away.
 - New statuses: `checkout`, `gate`, `hold` (all count as on site and are on the evacuation list).
 
+## Safety briefing (Visitor Connect)
+
+- During sign-in, after the photo, visitors read the **site safety briefing**: emergency number, assembly point,
+  "Before you start" notes, site rules with icons and an optional exit-plan picture. They tick three boxes to
+  continue: read and will follow the briefing, **18 years or older**, and **consent** to their details and photo
+  being recorded. The server checks the ticks too.
+- **`/admin/safety`** (admins): edit everything, with a live preview. Saving a change publishes a **new version**;
+  each visit records the version it accepted (`safetyVersion`), shown on the gate pass with the 18+ and consent ticks.
+  Switching the briefing off removes the step.
+- On the visitor's phone, **Safety & emergency** (`/badge/<id>/safety`) shows the briefing during the visit.
+- Rule kinds and icons: `lib/safetyRules.ts`; starting briefing and helpers: `lib/safety.ts`.
+- The NDA pages at `/nda` are separate and unchanged.
+
 ## Design (InternFactory Visitor Connect)
 
 The look follows the InternFactory Visitor Connect design: frosted-glass panels over a soft indigo / sky /

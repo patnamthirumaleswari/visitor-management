@@ -147,7 +147,7 @@ function GateCard({ row, canClear, onDone, time }: { row: GateRow; canClear: boo
         {row.status === "hold" && (canClear
           ? <ClearHoldButton visitId={row.id} onDone={onDone} />
           : <span className="muted small">Waiting for the host or an admin to clear the hold.</span>)}
-        <a className="btn ghost sm" href={`/admin/visits/${row.id}`}><Icon name="file" />Gate pass</a>
+        <a className="btn ghost sm" href={`/visits/${row.id}`}><Icon name="file" />Details &amp; gate pass</a>
         {error && <p className="errmsg" role="alert" style={{ margin: 0 }}><Icon name="alert" />{error}</p>}
       </div>
     </article>

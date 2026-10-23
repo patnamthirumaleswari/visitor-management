@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ResolvedBranding } from "@/lib/branding";
+import type { BriefingView } from "@/lib/safety";
+import SafetyBriefingView from "../SafetyBriefingView";
 import type { AGREEMENT, LOCATION } from "@/lib/config";
 import type { FieldMode, Question, StandardField, VisitorType } from "@/lib/db";
 import { BADGE_STORAGE_KEY, INVITE_STORAGE_KEY } from "@/lib/storageKeys";
@@ -13,21 +15,22 @@ import InviteScanner from "./InviteScanner";
 type Props = {
   location: typeof LOCATION;
   brand: ResolvedBranding; // company name, logo and colour from /admin/branding
+  briefing: BriefingView | null; // site safety briefing to accept before signing in; null when switched off
   visitorTypes: VisitorType[];
   agreement: typeof AGREEMENT;
 };
 
 type HostOption = { id: string; name: string; department: string };
 type Invitation = { token: string; visitorName: string; hostName: string; visitorType: string; type: VisitorType | null };
-type Step = "welcome" | "scan" | "type" | "details" | "host" | "invite" | "questions" | "photo" | "agreement";
+type Step = "welcome" | "scan" | "type" | "details" | "host" | "invite" | "questions" | "photo" | "safety" | "agreement";
 type ScanState = { attempt: number; checking: boolean; error: string | null };
 
 const STEP_LABELS: Record<Step, string> = {
   welcome: "Welcome", scan: "Scan your invite", type: "Visitor type", details: "Your details", host: "Who you are visiting",
-  invite: "Your invitation", questions: "A few questions", photo: "Selfie", agreement: "Agreement",
+  invite: "Your invitation", questions: "A few questions", photo: "Selfie", safety: "Safety briefing", agreement: "Agreement",
 };
 
-export default function SignInFlow({ location, brand, visitorTypes, agreement }: Props) {
+export default function SignInFlow({ location, brand, briefing, visitorTypes, agreement }: Props) {
   // null until we've checked whether this phone already holds an invite, so the welcome
   // question doesn't flash up for someone who is about to be recognised.
   const [step, setStep] = useState<Step | null>(null);
@@ -41,6 +44,10 @@ export default function SignInFlow({ location, brand, visitorTypes, agreement }:
   const [photo, setPhoto] = useState<string | null>(null);
   const [signature, setSignature] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
+  // Safety briefing ticks (Visitor Connect)
+  const [safetyAck, setSafetyAck] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +56,7 @@ export default function SignInFlow({ location, brand, visitorTypes, agreement }:
   const steps: Step[] = invitation ? ["invite"] : ["type", "details", "host"];
   if (type?.questions.length) steps.push("questions");
   if (type?.photoRequired) steps.push("photo");
+  if (briefing) steps.push("safety");
   if (type?.agreementRequired) steps.push("agreement");
   const stepIndex = step ? steps.indexOf(step) : -1;
   const isLast = stepIndex === steps.length - 1;
@@ -149,8 +157,8 @@ export default function SignInFlow({ location, brand, visitorTypes, agreement }:
     setError(null);
     try {
       const body = invitation
-        ? { invitationToken: invitation.token, photo, signature, agreed, answers }
-        : { visitorType: type.id, ...details, hostId: host!.id, photo, signature, agreed, answers };
+        ? { invitationToken: invitation.token, photo, signature, agreed, answers, safetyAck, ageConfirmed, consent }
+        : { visitorType: type.id, ...details, hostId: host!.id, photo, signature, agreed, answers, safetyAck, ageConfirmed, consent };
       const res = await fetch("/api/visits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -180,6 +188,7 @@ export default function SignInFlow({ location, brand, visitorTypes, agreement }:
     step === "invite" ? true :
     step === "questions" ? !!type && type.questions.every((q) => !q.required || !!answers[q.id]?.trim()) :
     step === "photo" ? !!photo :
+    step === "safety" ? safetyAck && ageConfirmed && consent :
     agreed && !!signature;
 
   if (!step) {
@@ -302,6 +311,26 @@ export default function SignInFlow({ location, brand, visitorTypes, agreement }:
         )}
 
         {step === "photo" && <PhotoStep photo={photo} onPhoto={setPhoto} />}
+
+        {step === "safety" && briefing && (
+          <>
+            <h1>Site safety briefing</h1>
+            <p className="muted" style={{ margin: 0 }}>Please read this before entering {briefing.locationName}.</p>
+            <SafetyBriefingView briefing={briefing} />
+            <label className="tick">
+              <input type="checkbox" checked={safetyAck} onChange={(e) => setSafetyAck(e.target.checked)} />
+              <span>I have read and will follow the site safety briefing.</span>
+            </label>
+            <label className="tick">
+              <input type="checkbox" checked={ageConfirmed} onChange={(e) => setAgeConfirmed(e.target.checked)} />
+              <span>I confirm that I am <b>18 years of age or older</b>.</span>
+            </label>
+            <label className="tick">
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <span>I agree that {brand.companyName} may record my details and photo to manage this visit and for site security.</span>
+            </label>
+          </>
+        )}
 
         {step === "agreement" && (
           <>

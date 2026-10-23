@@ -1,5 +1,6 @@
 import { AGREEMENT, LOCATION } from "@/lib/config";
 import { getBranding } from "@/lib/branding";
+import { getBriefing, toView } from "@/lib/safety";
 import { getSignInSession } from "@/lib/session";
 import { getActiveVisitorTypes } from "@/lib/visitorTypes";
 import ExistingBadgeLink from "./ExistingBadgeLink";
@@ -27,5 +28,6 @@ export default async function VisitPage({ searchParams }: { searchParams: Promis
     );
   }
 
-  return <SignInFlow location={LOCATION} brand={getBranding()} visitorTypes={getActiveVisitorTypes()} agreement={AGREEMENT} />;
+  const briefing = getBriefing();
+  return <SignInFlow location={LOCATION} brand={getBranding()} briefing={briefing.enabled ? toView(briefing) : null} visitorTypes={getActiveVisitorTypes()} agreement={AGREEMENT} />;
 }
