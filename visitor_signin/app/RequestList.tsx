@@ -2,6 +2,7 @@
 
 // Rows of visitors (Visitor Connect "vrow"), with Approve / Deny on the ones waiting for an answer.
 
+import ClearHoldButton from "./ClearHoldButton";
 import DecisionButtons from "./DecisionButtons";
 import Icon from "./Icon";
 import type { RequestRow } from "@/lib/requests";
@@ -11,6 +12,9 @@ const STATUS: Record<RequestRow["status"], { label: string; tone: string }> = {
   pending: { label: "Waiting for approval", tone: "t-wait" },
   signed_in: { label: "On site", tone: "t-ok" },
   denied: { label: "Not approved", tone: "t-bad" },
+  checkout: { label: "Checkout requested", tone: "t-wait" },
+  gate: { label: "Cleared for exit", tone: "t-info" },
+  hold: { label: "Held at gate", tone: "t-bad" },
   signed_out: { label: "Left", tone: "t-done" },
 };
 
@@ -26,7 +30,7 @@ export default function RequestList({ rows, onDecided, showHost }: { rows: Reque
       {rows.map((r) => {
         const initials = r.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
         return (
-          <div key={r.id} className={`vrow${r.escalated && r.status === "pending" ? " alert" : ""}`}>
+          <div key={r.id} className={`vrow${(r.escalated && (r.status === "pending" || r.status === "checkout")) || r.status === "hold" ? " alert" : ""}`}>
             <span className="avatar" style={{ width: 46, height: 46, fontSize: 16 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {r.photo ? <img src={r.photo} alt="" /> : initials}
@@ -42,18 +46,25 @@ export default function RequestList({ rows, onDecided, showHost }: { rows: Reque
               <div className="chips">
                 {r.no && <span className="tag mono">No. {r.no}</span>}
                 {r.code && r.status === "pending" && <span className="tag mono">Code {r.code}</span>}
-                {r.status === "pending" ? (
-                  <span className="wait"><Icon name="clock" /> waiting {r.waitingMinutes} min</span>
+                {r.status === "pending" || r.status === "checkout" ? (
+                  <span className="wait"><Icon name="clock" /> {r.status === "checkout" ? "wants to leave" : "waiting"} {r.waitingMinutes} min</span>
                 ) : (
                   <span><Icon name="clock" /> in {time(r.checkedInAt)}{r.decidedBy ? ` · ${r.status === "denied" ? "not approved" : "approved"} by ${r.decidedBy}` : ""}</span>
                 )}
-                {r.escalated && r.status === "pending" && <span className="pill t-bad">Escalated</span>}
+                {r.escalated && (r.status === "pending" || r.status === "checkout") && <span className="pill t-bad">Escalated</span>}
+                {r.status === "hold" && r.holdReason && <span style={{ color: "var(--bad)", fontWeight: 600 }}>{r.holdReason}</span>}
               </div>
               {r.answers.map((a) => (
                 <div key={a.questionId} className="small answer"><span className="muted">{a.label}</span> {a.value}</div>
               ))}
               {r.status === "denied" && r.decisionNote && <div className="small answer"><span className="muted">Note:</span> {r.decisionNote}</div>}
+              {r.status === "signed_in" && r.checkoutNote && <div className="small answer"><span className="muted">Checkout not yet:</span> {r.checkoutNote}</div>}
               {r.status === "pending" && <DecisionButtons endpoint={`/api/staff/visits/${r.id}/decide`} onDone={onDecided} />}
+              {r.status === "checkout" && (
+                <DecisionButtons endpoint={`/api/staff/visits/${r.id}/decide`} onDone={onDecided}
+                  labels={{ approve: "Approve checkout", deny: "Not yet", confirmDeny: "Keep them on site", notePlaceholder: "Note for the visitor (optional), e.g. Please wait for the meeting to end" }} />
+              )}
+              {r.status === "hold" && <ClearHoldButton visitId={r.id} onDone={onDecided} />}
             </div>
           </div>
         );

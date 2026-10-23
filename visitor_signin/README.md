@@ -189,6 +189,24 @@ No answer in 5 min -> marked Escalated, reception told (RECEPTION_EMAIL), admins
 - Logic lives in `lib/approvals.ts` (statuses, numbers, who can decide, escalation) and `lib/requests.ts`.
 - `npm run dev` now also works from the repository root (root `package.json` forwards to `visitor_signin`).
 
+## Checkout and the gate (Visitor Connect)
+
+```
+On site -> visitor taps "Check out" (phone, or "Signing out?" at reception)
+        -> host confirms (email/SMS link or Home)   or "Not yet" + note -> stays on site
+        -> phone: "Go to the exit gate"  -> /gate: security checks the photo
+        -> Release (visit complete)   or   Hold + reason -> host / reception / admin clears -> Release
+```
+
+- **`/gate`** (security's home; also reception and admins): visitors cleared to leave or held, with a big photo,
+  number, code, host and who cleared them. Release, or Hold with a reason (the host is told by email).
+- Types with "Host approves entry" off (e.g. Delivery) skip the host and go straight to the gate.
+- Checkout requests nobody confirms in 5 minutes are escalated to reception, like entry requests.
+- **Gate pass**: the visitor's live digital pass (`/badge/<id>/pass`) and the staff copy (`/admin/visits/<id>`):
+  details, the record (registered, approved, checkout approved, released, with times and names) and the signature.
+- Staff "Sign out" on `/admin` and the 8 pm automatic sign-out still end a visit straight away.
+- New statuses: `checkout`, `gate`, `hold` (all count as on site and are on the evacuation list).
+
 ## Design (InternFactory Visitor Connect)
 
 The look follows the InternFactory Visitor Connect design: frosted-glass panels over a soft indigo / sky /

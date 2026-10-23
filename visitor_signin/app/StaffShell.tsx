@@ -15,6 +15,7 @@ type NavItem = { href: string; label: string; short: string; icon: IconName; rol
 const NAV: NavItem[] = [
   { href: "/admin", label: "Home", short: "Home", icon: "home", roles: ["admin", "receptionist"] },
   { href: "/requests", label: "Home", short: "Home", icon: "home", roles: ["host"] },
+  { href: "/gate", label: "Main gate", short: "Gate", icon: "door", roles: ["admin", "receptionist", "security"] },
   { href: "/pre-register", label: "Pre-register", short: "Invite", icon: "send", roles: ["admin", "receptionist", "host"] },
   { href: "/security", label: "Evacuation list", short: "Evacuation", icon: "siren", roles: ["admin", "receptionist", "security"] },
   { href: "/admin/visitor-types", label: "Visitor types", short: "Types", icon: "list", roles: ["admin"] },

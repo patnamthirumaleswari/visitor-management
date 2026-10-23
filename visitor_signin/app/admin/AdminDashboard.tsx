@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Icon, { type IconName } from "../Icon";
-import RequestList from "../RequestList";
+import RequestList, { StatusPill } from "../RequestList";
 import type { RequestRow } from "@/lib/requests";
 
 type OnsiteVisit = {
   id: string;
   no?: number;
+  status: RequestRow["status"];
   name: string;
   company: string;
   phone: string;
@@ -117,7 +118,7 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
       {/* Visitors at reception waiting for their host to approve entry; admins and reception can answer too */}
       {pending.length > 0 && (
         <section className="panel" style={{ marginBottom: 16 }}>
-          <div className="panel-h"><h3>Waiting at reception for approval</h3><span className="count">{pending.length}</span></div>
+          <div className="panel-h"><h3>Needs an answer</h3><span className="count">{pending.length}</span></div>
           <RequestList rows={pending} onDecided={load} showHost />
         </section>
       )}
@@ -133,7 +134,10 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
                 <div className="main">
                   <div className="t">
                     <b>{v.name}</b>
-                    <span className="pill" style={{ background: `${v.typeColor}1f`, color: v.typeColor }}>{v.typeLabel}</span>
+                    <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {v.status !== "signed_in" && <StatusPill status={v.status} />}
+                      <span className="pill" style={{ background: `${v.typeColor}1f`, color: v.typeColor }}>{v.typeLabel}</span>
+                    </span>
                   </div>
                   <div className="meta">{v.company ? `${v.company} · ` : ""}for {v.host} · {v.phone}</div>
                   <div className="chips">
@@ -145,6 +149,7 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
                     <div key={a.questionId} className="small answer"><span className="muted">{a.label}</span> {a.value}</div>
                   ))}
                   <div className="acts">
+                    <a className="btn line sm" href={`/admin/visits/${v.id}`}><Icon name="file" />Gate pass</a>
                     <a className="btn line sm" href={`/admin/badge/${v.id}`} target="_blank" rel="noopener"><Icon name="badge" />Print badge</a>
                     <button className="btn line sm" onClick={() => signOut(v.id, v.name)}><Icon name="logout" />Sign out</button>
                   </div>

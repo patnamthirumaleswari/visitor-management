@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
+import { addEvent, isOnSite } from "@/lib/approvals";
 import { write } from "@/lib/db";
 
 // Manual sign-out from the portal (FR-ADM-02).
@@ -13,10 +14,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const found = write((d) => {
     const visit = d.visits.find((v) => v.id === id);
     if (!visit) return false;
-    if (visit.status === "signed_in") {
+    // Staff can end a visit at any stage (a staff override of the checkout and gate steps).
+    if (isOnSite(visit) || visit.status === "pending") {
       visit.status = "signed_out";
       visit.signedOutAt = new Date().toISOString();
       visit.signedOutBy = "portal";
+      delete visit.hold;
+      addEvent(visit, "Signed out by staff", staff.name);
     }
     return true;
   });

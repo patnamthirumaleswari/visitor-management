@@ -129,10 +129,50 @@ export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Vi
   );
 }
 
+/** The visitor wants to leave: the host confirms the visit is finished (or says "not yet"). */
+export async function notifyHostCheckout(host: Host, visitor: Visitor, visit: Visit) {
+  const channels: NotificationChannel[] = host.notifyBy?.length ? host.notifyBy : ["email"];
+  const link = decisionLink(visit);
+  const text = `${visitor.name} (visitor no. ${visit.no ?? ""}) wants to check out. Confirm their visit is finished: ${link}`;
+  const record = { kind: "checkout", visitId: visit.id, hostId: host.id } as const;
+  await Promise.all(
+    channels.map((channel) =>
+      channel === "sms"
+        ? deliver({ ...record, channel, to: host.phone }, () => sendSms(host.phone, text))
+        : deliver({ ...record, channel, to: host.email }, () =>
+            sendEmail({
+              to: host.email,
+              subject: `${visitor.name} wants to check out`,
+              text,
+              html: emailLayout(`
+                <h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} wants to check out</h2>
+                <p>Confirm their visit is finished, and security will let them out at the gate.</p>
+                <p style="margin:20px 0"><a href="${escapeHtml(link)}" style="background:#059669;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700">Confirm checkout</a></p>`),
+            }),
+          ),
+    ),
+  );
+}
+
+/** Security is holding the visitor at the gate: tell the host so they (or an admin) can clear it. */
+export async function notifyHostHold(host: Host, visitor: Visitor, visit: Visit) {
+  const reason = visit.hold?.reason ?? "";
+  const text = `${visitor.name} (visitor no. ${visit.no ?? ""}) is held at the gate by security: ${reason}. Sign in to Visitor Connect to clear the hold.`;
+  return deliver({ kind: "hold", visitId: visit.id, hostId: host.id, channel: "email", to: host.email }, () =>
+    sendEmail({
+      to: host.email,
+      subject: `${visitor.name} is held at the gate`,
+      text,
+      html: emailLayout(`<h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} is held at the gate</h2><p>${escapeHtml(text)}</p>`),
+    }),
+  );
+}
+
 /** Nobody answered in time: tell reception (RECEPTION_EMAIL in .env.local), or log it. */
 export async function notifyReceptionEscalated(visit: Visit, visitorName: string, hostName: string) {
   const to = process.env.RECEPTION_EMAIL?.trim() || "reception (RECEPTION_EMAIL not set)";
-  const text = `${visitorName} (visitor no. ${visit.no ?? ""}) has waited ${ESCALATE_MINUTES}+ minutes for ${hostName} to approve entry. Approve or deny: ${decisionLink(visit)}`;
+  const what = visit.status === "checkout" ? "confirm their checkout" : "approve entry";
+  const text = `${visitorName} (visitor no. ${visit.no ?? ""}) has waited ${ESCALATE_MINUTES}+ minutes for ${hostName} to ${what}. Answer here: ${decisionLink(visit)}`;
   return deliver({ kind: "escalation", visitId: visit.id, channel: "email", to }, () =>
     sendEmail({
       to: process.env.RECEPTION_EMAIL?.trim() || "reception@localhost",

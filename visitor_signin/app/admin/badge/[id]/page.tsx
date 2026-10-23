@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isOnSite } from "@/lib/approvals";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { loadBadge } from "@/lib/badge";
 import BadgeCard from "../../../badge/BadgeCard";
@@ -19,7 +20,7 @@ export default async function PrintBadgePage({ params }: { params: Promise<{ id:
     <main className="print-badge">
       {/* Only on this page: one badge per 62 mm x 100 mm page, no margins. */}
       <style>{`@page { size: 62mm 100mm; margin: 0; }`}</style>
-      <PrintControls signedOut={badge.visit.status !== "signed_in"} />
+      <PrintControls signedOut={!isOnSite(badge.visit)} />
       <BadgeCard badge={badge} />
     </main>
   );
