@@ -29,6 +29,7 @@ export const ACCESS = {
   branding: ["admin"], // /admin/branding: logo, colour, company name, welcome text
   gate: ["admin", "receptionist", "security"], // /gate: release or hold visitors leaving
   decide: ["admin", "receptionist", "host"], // approve / deny entry: hosts for their own visitors only
+  safety: ["admin"], // /admin/safety: the site safety briefing visitors accept
   visitorTypes: ["admin"], // /admin/visitor-types: types, their fields and questions, photo on/off
 } satisfies Record<string, StaffRole[]>;
 

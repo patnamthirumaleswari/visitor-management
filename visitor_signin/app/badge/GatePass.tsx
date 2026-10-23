@@ -58,16 +58,21 @@ export default function GatePass({ pass }: { pass: PassData }) {
         {visit.hold && (
           <p className="errmsg" style={{ margin: 0 }}><Icon name="shieldAlert" />Held at the gate: {visit.hold.reason} ({visit.hold.by})</p>
         )}
-        {visit.signature && (
+        {(visit.signature || visit.safetyVersion) && (
           <div>
             <div className="secth" style={{ marginTop: 0 }}>Agreement</div>
-            <div className="pass-agree">
+            <div className={visit.signature ? "pass-agree" : ""}>
               <div className="small" style={{ display: "grid", gap: 4 }}>
-                <span><Icon name="check" /> Visitor agreement{visit.agreementVersion ? ` v${visit.agreementVersion}` : ""}</span>
-                <span className="muted">Signed {fmt(visit.checkedInAt)}</span>
+                {visit.safetyVersion && <span><Icon name="check" /> Safety briefing v{visit.safetyVersion}</span>}
+                {visit.signature && <span><Icon name="check" /> Visitor agreement{visit.agreementVersion ? ` v${visit.agreementVersion}` : ""}</span>}
+                {visit.ageConfirmed && <span><Icon name="check" /> 18 years or older</span>}
+                {visit.consentAt && <span><Icon name="check" /> Agreed to details and photo being recorded</span>}
+                <span className="muted">Accepted {fmt(visit.consentAt ?? visit.checkedInAt)}</span>
               </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <div className="sigbox"><img src={visit.signature} alt="Visitor signature" /></div>
+              {visit.signature && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <div className="sigbox"><img src={visit.signature} alt="Visitor signature" /></div>
+              )}
             </div>
           </div>
         )}

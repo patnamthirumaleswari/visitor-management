@@ -113,6 +113,9 @@ export type Visit = {
   agreementVersion?: string;
   signature?: string; // data URL of the finger signature
   answers?: Answer[]; // the visitor type's questions, answered at sign-in (FR-KIO-05)
+  safetyVersion?: number; // the safety briefing version the visitor read and accepted
+  ageConfirmed?: boolean; // ticked "I am 18 years of age or older"
+  consentAt?: string; // when they agreed to their details and photo being recorded
 };
 
 // One message sent (or attempted). "logged" = provider not configured, printed to the console instead.
@@ -164,8 +167,22 @@ export type Branding = {
 
 export type TimelineEvent = { at: string; event: string; by: string };
 
+// Site safety briefing (Visitor Connect), edited on /admin/safety. See lib/safety.ts.
+export type SafetyRule = { kind: string; text: string };
+export type SafetyBriefing = {
+  enabled: boolean; // visitors must read and accept it before signing in
+  version: number; // goes up each time a change is saved; visits record the version they accepted
+  emergencyPhone: string;
+  assemblyPoint: string;
+  notes: string[]; // "Before you start" notes, e.g. a fire drill this week
+  rules: SafetyRule[];
+  exitPlan: string | null; // picture of the exit plan (data URL, prototype); file storage in production
+  updatedAt: string;
+};
+
 export type Data = {
   counters?: { visitNo: number }; // last visitor number handed out
+  safety?: SafetyBriefing; // missing until an admin saves one: the starting briefing in lib/safety.ts applies
   visitorTypes: VisitorType[];
   branding?: Branding;
   staff: StaffUser[];

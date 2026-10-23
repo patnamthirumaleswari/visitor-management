@@ -28,8 +28,12 @@ export default async function BadgePage({
 
   const { visit } = badge;
   const hostFirstName = badge.hostName.split(" ")[0];
-  const waiting = visit.status === "pending" || visit.status === "checkout" || visit.status === "gate" || visit.status === "hold";
+  // Keep checking while something can still change, including "not approved" (the host may change their mind).
+  const waiting = ["pending", "checkout", "gate", "hold", "denied"].includes(visit.status);
+  // The last thing that happened was the host declining the checkout (with or without a note).
+  const checkoutDeclined = visit.status === "signed_in" && (visit.timeline?.at(-1)?.event ?? "").startsWith("Checkout declined");
   const passHref = `/badge/${visit.id}/pass?t=${visit.badgeToken}`;
+  const safetyHref = `/badge/${visit.id}/safety?t=${visit.badgeToken}`;
 
   return (
     <main className="phone stack">
@@ -48,14 +52,19 @@ export default async function BadgePage({
 
       {visit.status === "signed_in" && (
         <>
-          <Status cls="s-ok pop" icon="shieldCheck" title="You are approved"
-            text={`${visit.decidedBy ? `${hostFirstName} approved your visit. ` : `${hostFirstName} has been told you've arrived. `}When you finish, tap Check out below.`} />
-          {visit.checkoutNote && (
-            <p className="notice" style={{ margin: 0 }}><Icon name="info" />Checkout not confirmed yet: &ldquo;{visit.checkoutNote}&rdquo;</p>
+          {checkoutDeclined ? (
+            // The host said "not yet" to the checkout: that's the main message, not the earlier approval.
+            <Status cls="s-wait pop" icon="hourglass" title="Checkout not confirmed yet"
+              text={visit.checkoutNote
+                ? `${hostFirstName} says: “${visit.checkoutNote}”. You're still signed in; tap Check out again when you're ready.`
+                : `${hostFirstName} hasn't confirmed your visit is finished. Please check with them, then tap Check out again.`} />
+          ) : (
+            <Status cls="s-ok pop" icon="shieldCheck" title="You are approved"
+              text={`${visit.decidedBy ? `${hostFirstName} approved your visit. ` : `${hostFirstName} has been told you've arrived. `}When you finish, tap Check out below.`} />
           )}
           <BadgeCard badge={badge} />
           <CheckoutButton visitId={visit.id} token={visit.badgeToken} />
-          <Links passHref={passHref} />
+          <Links passHref={passHref} safetyHref={safetyHref} />
         </>
       )}
 
@@ -63,7 +72,7 @@ export default async function BadgePage({
         <>
           <Status cls="s-wait" icon="hourglass" title="Checkout requested" text={`Waiting for ${badge.hostName} to confirm your visit is finished.`} />
           <VisitCard badge={badge} />
-          <Links passHref={passHref} />
+          <Links passHref={passHref} safetyHref={safetyHref} />
         </>
       )}
 
@@ -71,7 +80,7 @@ export default async function BadgePage({
         <>
           <Status cls="s-gate pop" icon="door" title="Go to the exit gate" text="Show this screen to security. They check your photo and let you out." />
           <VisitCard badge={badge} big />
-          <Links passHref={passHref} />
+          <Links passHref={passHref} safetyHref={safetyHref} />
         </>
       )}
 
@@ -151,12 +160,21 @@ function VisitCard({ badge, big }: { badge: BadgeData; big?: boolean }) {
   );
 }
 
-function Links({ passHref }: { passHref: string }) {
+function Links({ passHref, safetyHref }: { passHref: string; safetyHref?: string }) {
   return (
-    <a className="linkcard" href={passHref}>
-      <span className="li" style={{ background: "var(--gold-soft)", color: "var(--gold-ink)" }}><Icon name="file" /></span>
-      <span><b>Gate pass</b><small>Your live digital pass</small></span>
-      <Icon name="chev" />
-    </a>
+    <div className="links2">
+      <a className="linkcard" href={passHref}>
+        <span className="li" style={{ background: "var(--gold-soft)", color: "var(--gold-ink)" }}><Icon name="file" /></span>
+        <span><b>Gate pass</b><small>Your live digital pass</small></span>
+        <Icon name="chev" />
+      </a>
+      {safetyHref && (
+        <a className="linkcard" href={safetyHref}>
+          <span className="li" style={{ background: "var(--bad-soft)", color: "var(--bad)" }}><Icon name="siren" /></span>
+          <span><b>Safety &amp; emergency</b><small>Emergency number, rules, exit plan</small></span>
+          <Icon name="chev" />
+        </a>
+      )}
+    </div>
   );
 }

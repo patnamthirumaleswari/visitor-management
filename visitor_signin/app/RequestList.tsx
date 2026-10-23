@@ -4,6 +4,7 @@
 
 import ClearHoldButton from "./ClearHoldButton";
 import DecisionButtons from "./DecisionButtons";
+import ReapproveButton from "./ReapproveButton";
 import Icon from "./Icon";
 import type { RequestRow } from "@/lib/requests";
 
@@ -36,7 +37,7 @@ export default function RequestList({ rows, onDecided, showHost }: { rows: Reque
               {r.photo ? <img src={r.photo} alt="" /> : initials}
             </span>
             <div className="main">
-              <div className="t"><b>{r.name}</b><StatusPill status={r.status} /></div>
+              <div className="t"><a className="namelink" href={`/visits/${r.id}`}><b>{r.name}</b></a><StatusPill status={r.status} /></div>
               <div className="meta">
                 {r.company ? `${r.company} · ` : ""}
                 <span style={{ color: r.typeColor, fontWeight: 600 }}>{r.typeLabel}</span>
@@ -65,6 +66,8 @@ export default function RequestList({ rows, onDecided, showHost }: { rows: Reque
                   labels={{ approve: "Approve checkout", deny: "Not yet", confirmDeny: "Keep them on site", notePlaceholder: "Note for the visitor (optional), e.g. Please wait for the meeting to end" }} />
               )}
               {r.status === "hold" && <ClearHoldButton visitId={r.id} onDone={onDecided} />}
+              {r.status === "denied" && r.reapprovable && <ReapproveButton visitId={r.id} onDone={onDecided} />}
+              <a className="btn ghost sm" href={`/visits/${r.id}`} style={{ marginTop: 6, paddingLeft: 0 }}><Icon name="file" />View details</a>
             </div>
           </div>
         );

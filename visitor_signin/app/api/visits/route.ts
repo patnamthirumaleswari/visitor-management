@@ -1,9 +1,10 @@
 import { after, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { AGREEMENT } from "@/lib/config";
-import { newId, normalizePhone, write, type Host, type StandardField, type Visit, type Visitor, type VisitorType } from "@/lib/db";
+import { newId, normalizePhone, write, type Host, type SafetyBriefing, type StandardField, type Visit, type Visitor, type VisitorType } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
 import { addEvent, isOpen, needsApproval, newNumberAndCode } from "@/lib/approvals";
+import { briefingFrom, getBriefing } from "@/lib/safety";
 import { notifyHost, notifyHostApproval } from "@/lib/notify";
 import { getSignInSession, SESSION_COOKIE } from "@/lib/session";
 import { randomToken, type TokenPayload } from "@/lib/token";
@@ -24,6 +25,9 @@ type Body = {
   signature?: string | null;
   agreed?: boolean;
   answers?: Record<string, string>; // question id -> answer (FR-KIO-05)
+  safetyAck?: boolean; // read and will follow the safety briefing (Visitor Connect)
+  ageConfirmed?: boolean; // 18 years or older
+  consent?: boolean; // agrees to details and photo being recorded
 };
 
 const MAX_IMAGE_CHARS = 1_500_000; // ~1.1 MB once decoded; resized photos are ~50 KB
@@ -68,6 +72,8 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
     if (problem) return { error: problem, status: 400 };
     const checked = checkAnswers(type, body.answers);
     if ("error" in checked) return { error: checked.error, status: 400 };
+    const safety = checkSafety(briefingFrom(d), body);
+    if ("error" in safety) return { error: safety.error, status: 400 };
 
     const now = new Date().toISOString();
     if (isImageDataUrl(body.photo)) match.visitor.photo = body.photo;
@@ -80,6 +86,7 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
       signedInAt: now,
       ...agreementFields(type, body),
       ...(checked.answers.length ? { answers: checked.answers } : {}),
+      ...safety.fields,
     } satisfies Partial<Visit>);
     match.invitation.usedAt = now;
     addEvent(match.visit, "Checked in with an invitation", "Visitor (own phone)", now);
@@ -113,6 +120,8 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
   if (problem) return bad(problem);
   const checked = checkAnswers(type, body.answers);
   if ("error" in checked) return bad(checked.error);
+  const safety = checkSafety(getBriefing(), body);
+  if ("error" in safety) return bad(safety.error);
 
   const result = write((d) => {
     // Re-check inside the write so two rapid submits can't both use the same session.
@@ -151,6 +160,7 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
       badgeToken: randomToken(),
       ...agreementFields(type, body),
       ...(checked.answers.length ? { answers: checked.answers } : {}),
+      ...safety.fields,
     };
     addEvent(visit, "Checked in by QR code", "Visitor (own phone)", now);
     if (!approval) addEvent(visit, `Entry started (${type.label}: no approval needed)`, "System", now);
@@ -160,6 +170,15 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
   });
 
   return "error" in result ? NextResponse.json({ error: result.error }, { status: result.status }) : finish(result);
+}
+
+/** With the safety briefing on, the visitor must tick all three boxes; the version they accepted is kept. */
+function checkSafety(briefing: SafetyBriefing, body: Body): { fields: Partial<Visit> } | { error: string } {
+  if (!briefing.enabled) return { fields: {} };
+  if (body.safetyAck !== true) return { error: "Please confirm you have read the site safety briefing." };
+  if (body.ageConfirmed !== true) return { error: "Please confirm you are 18 years of age or older." };
+  if (body.consent !== true) return { error: "Please agree to your details and photo being recorded for this visit." };
+  return { fields: { safetyVersion: briefing.version, ageConfirmed: true, consentAt: new Date().toISOString() } };
 }
 
 function checkPhotoAndAgreement(type: VisitorType, body: Body): string | null {

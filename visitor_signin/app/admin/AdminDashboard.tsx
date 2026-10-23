@@ -133,7 +133,7 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
                 <Avatar name={v.name} photo={v.photo} size={46} />
                 <div className="main">
                   <div className="t">
-                    <b>{v.name}</b>
+                    <a className="namelink" href={`/visits/${v.id}`}><b>{v.name}</b></a>
                     <span style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {v.status !== "signed_in" && <StatusPill status={v.status} />}
                       <span className="pill" style={{ background: `${v.typeColor}1f`, color: v.typeColor }}>{v.typeLabel}</span>
@@ -149,7 +149,7 @@ export default function AdminDashboard({ firstName, locationName }: { firstName:
                     <div key={a.questionId} className="small answer"><span className="muted">{a.label}</span> {a.value}</div>
                   ))}
                   <div className="acts">
-                    <a className="btn line sm" href={`/admin/visits/${v.id}`}><Icon name="file" />Gate pass</a>
+                    <a className="btn line sm" href={`/visits/${v.id}`}><Icon name="file" />Details</a>
                     <a className="btn line sm" href={`/admin/badge/${v.id}`} target="_blank" rel="noopener"><Icon name="badge" />Print badge</a>
                     <button className="btn line sm" onClick={() => signOut(v.id, v.name)}><Icon name="logout" />Sign out</button>
                   </div>
