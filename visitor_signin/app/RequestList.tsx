@@ -11,6 +11,7 @@ import type { RequestRow } from "@/lib/requests";
 const STATUS: Record<RequestRow["status"], { label: string; tone: string }> = {
   expected: { label: "Expected", tone: "t-info" },
   pending: { label: "Waiting for approval", tone: "t-wait" },
+  review: { label: "Watchlist review", tone: "t-bad" },
   signed_in: { label: "On site", tone: "t-ok" },
   denied: { label: "Not approved", tone: "t-bad" },
   checkout: { label: "Checkout requested", tone: "t-wait" },
@@ -31,7 +32,7 @@ export default function RequestList({ rows, onDecided, showHost }: { rows: Reque
       {rows.map((r) => {
         const initials = r.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
         return (
-          <div key={r.id} className={`vrow${(r.escalated && (r.status === "pending" || r.status === "checkout")) || r.status === "hold" ? " alert" : ""}`}>
+          <div key={r.id} className={`vrow${(r.escalated && (r.status === "pending" || r.status === "checkout")) || r.status === "hold" || r.status === "review" ? " alert" : ""}`}>
             <span className="avatar" style={{ width: 46, height: 46, fontSize: 16 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {r.photo ? <img src={r.photo} alt="" /> : initials}
@@ -60,6 +61,8 @@ export default function RequestList({ rows, onDecided, showHost }: { rows: Reque
               ))}
               {r.status === "denied" && r.decisionNote && <div className="small answer"><span className="muted">Note:</span> {r.decisionNote}</div>}
               {r.status === "signed_in" && r.checkoutNote && <div className="small answer"><span className="muted">Checkout not yet:</span> {r.checkoutNote}</div>}
+              {r.status === "review" && r.watchReason && <div className="small answer" style={{ color: "var(--bad)", fontWeight: 600 }}>Watchlist: {r.watchReason}</div>}
+              {r.status === "review" && <DecisionButtons endpoint={`/api/staff/visits/${r.id}/decide`} onDone={onDecided} />}
               {r.status === "pending" && <DecisionButtons endpoint={`/api/staff/visits/${r.id}/decide`} onDone={onDecided} />}
               {r.status === "checkout" && (
                 <DecisionButtons endpoint={`/api/staff/visits/${r.id}/decide`} onDone={onDecided}

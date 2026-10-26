@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
@@ -36,5 +37,6 @@ export async function PUT(req: Request) {
     return true;
   });
   if (!saved) return NextResponse.json({ error: "Employee record not found." }, { status: 404 });
+  audit(req, staff, "Changed own reception PIN");
   return NextResponse.json({ ok: true });
 }

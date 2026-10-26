@@ -1,11 +1,13 @@
 import { after, NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { cookies } from "next/headers";
 import { AGREEMENT } from "@/lib/config";
 import { newId, normalizePhone, write, type Host, type SafetyBriefing, type StandardField, type Visit, type Visitor, type VisitorType } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
 import { addEvent, isOpen, needsApproval, newNumberAndCode } from "@/lib/approvals";
 import { briefingFrom, getBriefing } from "@/lib/safety";
-import { notifyHost, notifyHostApproval } from "@/lib/notify";
+import { findWatchMatch } from "@/lib/watchlist";
+import { notifyHost, notifyHostApproval, notifyWatchlistMatch } from "@/lib/notify";
 import { getSignInSession, SESSION_COOKIE } from "@/lib/session";
 import { randomToken, type TokenPayload } from "@/lib/token";
 import { checkAnswers, fieldMode, findVisitorType, getActiveVisitorTypes, STANDARD_FIELDS } from "@/lib/visitorTypes";
@@ -90,7 +92,15 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
     } satisfies Partial<Visit>);
     match.invitation.usedAt = now;
     addEvent(match.visit, "Checked in with an invitation", "Visitor (own phone)", now);
-    addEvent(match.visit, "Entry approved (invited by host)", match.host.name, now);
+    const hit = findWatchMatch(d, match.visitor.name, match.visitor.phone);
+    if (hit) {
+      // Even invited visitors are held for an admin when they match the watchlist.
+      Object.assign(match.visit, { status: "review", watch: { name: hit.name, reason: hit.reason } });
+      delete match.visit.signedInAt;
+      addEvent(match.visit, "Watchlist match: sent to admins only", "System", now);
+    } else {
+      addEvent(match.visit, "Entry approved (invited by host)", match.host.name, now);
+    }
     d.usedSessions.push(session.n);
     return { host: match.host, visitor: match.visitor, visit: match.visit };
   });
@@ -163,7 +173,16 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
       ...safety.fields,
     };
     addEvent(visit, "Checked in by QR code", "Visitor (own phone)", now);
-    if (!approval) addEvent(visit, `Entry started (${type.label}: no approval needed)`, "System", now);
+    const hit = findWatchMatch(d, name, phone);
+    if (hit) {
+      // Watchlist match (FR-SEC-02): hold for an admin, whatever the type; the host isn't asked.
+      visit.status = "review";
+      visit.watch = { name: hit.name, reason: hit.reason };
+      delete visit.signedInAt;
+      addEvent(visit, "Watchlist match: sent to admins only", "System", now);
+    } else if (!approval) {
+      addEvent(visit, `Entry started (${type.label}: no approval needed)`, "System", now);
+    }
     d.visits.push(visit);
     d.usedSessions.push(session.n);
     return { host, visitor, visit };
@@ -196,8 +215,16 @@ async function finish({ host, visitor, visit }: { host: Host; visitor: Visitor; 
 
   // Runs after the response is sent, so the visitor never waits on email/SMS delivery.
   // A waiting visitor sends the host an Approve / Deny request; otherwise a plain "has arrived".
-  after(() => (visit.status === "pending" ? notifyHostApproval(host, visitor, visit) : notifyHost(host, visitor, visit)));
+  // A watchlist match tells reception/admins only, never the host.
+  after(() =>
+    visit.status === "review"
+      ? notifyWatchlistMatch(visitor, visit)
+      : visit.status === "pending"
+        ? notifyHostApproval(host, visitor, visit)
+        : notifyHost(host, visitor, visit),
+  );
 
+  auditVisit(null, { name: "Visitor (own phone)", role: "Visitor" }, visit.status === "review" ? "Visitor checked in (watchlist match)" : "Visitor checked in", visit.id, `Host ${host.name}`);
   return NextResponse.json({ id: visit.id, badgeToken: visit.badgeToken }, { status: 201 });
 }
 

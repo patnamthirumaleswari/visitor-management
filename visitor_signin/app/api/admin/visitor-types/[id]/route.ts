@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
 import { cleanVisitorType } from "@/lib/visitorTypes";
@@ -10,7 +11,7 @@ type Params = { params: Promise<{ id: string }> };
 const NEED_ONE = "At least one visitor type must stay available, or visitors can't sign in.";
 
 // Admin edits a visitor type: name, colour, which fields it asks (FR-KIO-05), photo on/off (FR-KIO-07),
-// agreement, its questions, or hides it. Admins only (NFR-SEC-03). TODO: audit log (FR-ROLE-02).
+// agreement, its questions, or hides it. Admins only (NFR-SEC-03).
 export async function PUT(req: Request, { params }: Params) {
   const staff = await requireStaffApi(ACCESS.visitorTypes);
   if (staff instanceof NextResponse) return staff;
@@ -28,12 +29,13 @@ export async function PUT(req: Request, { params }: Params) {
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+  audit(req, staff, "Visitor type changed", `${result.type.label}${result.type.active ? "" : " (hidden)"}`);
   return NextResponse.json(result);
 }
 
 // Deleting is only allowed for a type no visit has used; otherwise hide it, so past visits
 // keep their type's name and colour.
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const staff = await requireStaffApi(ACCESS.visitorTypes);
   if (staff instanceof NextResponse) return staff;
   const { id } = await params;
@@ -50,5 +52,6 @@ export async function DELETE(_req: Request, { params }: Params) {
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+  audit(req, staff, "Visitor type deleted", id);
   return NextResponse.json(result);
 }

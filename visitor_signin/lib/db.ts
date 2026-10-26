@@ -85,11 +85,13 @@ export type Visit = {
   // expected = pre-registered, not arrived yet (FR-PRE-01)
   // pending  = at reception, waiting for the host to approve entry (Visitor Connect)
   // signed_in = on site (approved, or invited, or a type that needs no approval)
+  // review   = matched the watchlist at check-in; only an admin decides, the host isn't asked
   // denied   = the host or an admin did not approve entry
   // checkout = the visitor asked to leave; waiting for the host to confirm the visit is finished
   // gate     = cleared to leave; security checks the photo at the gate and releases them
   // hold     = security is holding them at the gate (reason in `hold`); the host or an admin clears it
-  status: "expected" | "pending" | "signed_in" | "denied" | "checkout" | "gate" | "hold" | "signed_out";
+  status: "expected" | "pending" | "review" | "signed_in" | "denied" | "checkout" | "gate" | "hold" | "signed_out";
+  watch?: { name: string; reason: string }; // the watchlist entry this visit matched (admins only)
   source: "qr" | "kiosk" | "portal";
   expectedDate?: string; // YYYY-MM-DD, for pre-registered visits
   no?: number; // visitor number, counting up at the location (101, 102, …)
@@ -121,7 +123,7 @@ export type Visit = {
 // One message sent (or attempted). "logged" = provider not configured, printed to the console instead.
 export type Notification = {
   id: string;
-  kind?: "arrival" | "invitation" | "approval" | "escalation" | "checkout" | "hold"; // missing on records from before invitations were sent
+  kind?: "arrival" | "invitation" | "approval" | "escalation" | "checkout" | "hold" | "watchlist"; // missing on records from before invitations were sent
   visitId: string;
   hostId?: string;
   to: string;
@@ -167,6 +169,9 @@ export type Branding = {
 
 export type TimelineEvent = { at: string; event: string; by: string };
 
+// Watchlist (FR-SEC-01..03), managed on /admin/watchlist. See lib/watchlist.ts.
+export type WatchEntry = { id: string; name: string; phone: string; company: string; reason: string; active: boolean; by: string; at: string };
+
 // Site safety briefing (Visitor Connect), edited on /admin/safety. See lib/safety.ts.
 export type SafetyRule = { kind: string; text: string };
 export type SafetyBriefing = {
@@ -181,7 +186,9 @@ export type SafetyBriefing = {
 };
 
 export type Data = {
+  audit?: import("./audit").AuditEntry[]; // audit log, newest first (FR-ROLE-02)
   counters?: { visitNo: number }; // last visitor number handed out
+  watchlist?: WatchEntry[];
   safety?: SafetyBriefing; // missing until an admin saves one: the starting briefing in lib/safety.ts applies
   visitorTypes: VisitorType[];
   branding?: Branding;

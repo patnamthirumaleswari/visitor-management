@@ -39,11 +39,11 @@ function isPastCutoff(signedInAt: string, now: number) {
 }
 
 /** When the visit started counting: entry time, or check-in time for a request nobody answered. */
-const startOf = (visit: Visit) => (visit.status === "pending" ? visit.checkedInAt : visit.signedInAt);
+const startOf = (visit: Visit) => (visit.status === "pending" || visit.status === "review" ? visit.checkedInAt : visit.signedInAt);
 
 function isDue(visit: Visit, now: number) {
   const start = startOf(visit);
-  const open = ["signed_in", "pending", "checkout", "gate", "hold"].includes(visit.status);
+  const open = ["signed_in", "pending", "review", "checkout", "gate", "hold"].includes(visit.status);
   return open && !!start && isPastCutoff(start, now);
 }
 

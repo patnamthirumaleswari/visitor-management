@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { decide, type Decision } from "@/lib/approvals";
 import { write } from "@/lib/db";
 import { readToken } from "@/lib/token";
@@ -22,11 +23,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     const visit = d.visits.find((v) => v.id === visitId);
     const host = d.hosts.find((h) => h.id === hostId);
     if (!visit || !host || visit.hostId !== hostId) return { error: "Visit not found.", status: 404 };
+    if (visit.status === "review") return { error: "An admin needs to answer this visit.", status: 403 }; // watchlist match
     const problem = decide(visit, decision, `${host.name} (from email)`, note);
     if (problem) return { error: problem, status: 409 };
-    return { visitStatus: visit.status };
+    return { visitStatus: visit.status, hostName: host.name };
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+  const action = decision === "approve"
+    ? (result.visitStatus === "gate" ? "Checkout approved" : "Entry approved")
+    : (result.visitStatus === "denied" ? "Entry not approved" : "Checkout declined");
+  auditVisit(req, { name: `${result.hostName} (from email)`, role: "Host" }, action, visitId, note ? `Note: ${note}` : "");
   return NextResponse.json({ status: result.visitStatus });
 }

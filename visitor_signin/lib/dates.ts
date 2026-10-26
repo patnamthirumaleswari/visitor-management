@@ -20,3 +20,10 @@ export function formatDay(isoDate: string): string {
     timeZone: "UTC",
   });
 }
+
+/** The date at the location when this happened, as YYYY-MM-DD. */
+export const dayAt = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: LOCATION.timezone }).format(new Date(iso));
+
+/** The hour (0-23) at the location when this happened. */
+export const hourAt = (iso: string) =>
+  Number(new Intl.DateTimeFormat("en-GB", { timeZone: LOCATION.timezone, hour: "2-digit", hourCycle: "h23" }).format(new Date(iso)));

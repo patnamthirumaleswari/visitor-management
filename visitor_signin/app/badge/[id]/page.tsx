@@ -29,7 +29,7 @@ export default async function BadgePage({
   const { visit } = badge;
   const hostFirstName = badge.hostName.split(" ")[0];
   // Keep checking while something can still change, including "not approved" (the host may change their mind).
-  const waiting = ["pending", "checkout", "gate", "hold", "denied"].includes(visit.status);
+  const waiting = ["pending", "review", "checkout", "gate", "hold", "denied"].includes(visit.status);
   // The last thing that happened was the host declining the checkout (with or without a note).
   const checkoutDeclined = visit.status === "signed_in" && (visit.timeline?.at(-1)?.event ?? "").startsWith("Checkout declined");
   const passHref = `/badge/${visit.id}/pass?t=${visit.badgeToken}`;
@@ -47,6 +47,13 @@ export default async function BadgePage({
           <p className="small muted" style={{ textAlign: "center" }}>
             Keep this page open. If you close it, use &quot;Find my visit&quot; with your visit code and mobile number.
           </p>
+        </>
+      )}
+
+      {visit.status === "review" && (
+        <>
+          <Status cls="s-wait" icon="hourglass" title="Please wait at reception" text="A member of staff will be with you shortly." />
+          <VisitCard badge={badge} />
         </>
       )}
 
@@ -130,7 +137,7 @@ function VisitCard({ badge, big }: { badge: BadgeData; big?: boolean }) {
   const initials = badge.visitorName.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
   const size = big ? 96 : 76;
   const phases = {
-    pending: ["cur", "", ""], signed_in: ["on", "", ""], denied: ["alert", "", ""], checkout: ["on", "cur", ""],
+    pending: ["cur", "", ""], review: ["cur", "", ""], signed_in: ["on", "", ""], denied: ["alert", "", ""], checkout: ["on", "cur", ""],
     gate: ["on", "on", "cur"], hold: ["on", "on", "alert"], signed_out: ["on", "on", "on"], expected: ["", "", ""],
   }[visit.status];
   return (

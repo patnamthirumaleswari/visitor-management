@@ -12,7 +12,7 @@ export async function GET() {
       // Greet people as soon as they check in, whether they're waiting for approval or already in.
       .filter((v) => {
         const at = v.checkedInAt ?? v.signedInAt;
-        return (v.status === "pending" || v.status === "signed_in") && !!at && new Date(at).getTime() > since;
+        return (v.status === "pending" || v.status === "review" || v.status === "signed_in") && !!at && new Date(at).getTime() > since;
       })
       .map((v) => ({
         id: v.id,

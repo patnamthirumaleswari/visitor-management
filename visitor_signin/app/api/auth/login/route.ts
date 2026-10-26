@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { audit } from "@/lib/audit";
 import { homeFor, STAFF_COOKIE, STAFF_SESSION_SECONDS } from "@/lib/auth";
 import { read } from "@/lib/db";
 import { verifyPassword } from "@/lib/password";
@@ -22,12 +23,14 @@ export async function POST(req: NextRequest) {
 
   // Same message for unknown user and wrong password, so it doesn't reveal which usernames exist.
   if (!user || !verifyPassword(password, user.passwordHash)) {
+    audit(req, { name: username || "(blank)", role: "Unknown" }, "Failed sign-in", "Wrong username or password");
     return NextResponse.json({ error: "Invalid username or password." }, { status: 401 });
   }
 
   // Only follow ?next= to a page on this site ("/admin"), never to another site ("//evil.com").
   const next = typeof body.next === "string" && /^\/(?![/\\])/.test(body.next) ? body.next : homeFor(user.role);
 
+  audit(req, { name: user.name, role: ({ admin: "Admin", receptionist: "Receptionist", host: "Host", security: "Security" } as const)[user.role] }, "Signed in");
   const res = NextResponse.json({ redirect: next });
   res.cookies.set(STAFF_COOKIE, makeToken("staff", STAFF_SESSION_SECONDS, user.id), {
     httpOnly: true,

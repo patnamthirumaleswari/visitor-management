@@ -65,7 +65,7 @@ export async function GET() {
   // Visitors waiting at reception for approval are inside the building too (evacuation list).
   const waiting = read((d) =>
     d.visits
-      .filter((v) => v.status === "pending")
+      .filter((v) => v.status === "pending" || v.status === "review")
       .map((v) => {
         const visitor = d.visitors.find((p) => p.id === v.visitorId);
         return {

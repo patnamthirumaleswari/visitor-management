@@ -31,6 +31,8 @@ export const ACCESS = {
   decide: ["admin", "receptionist", "host"], // approve / deny entry: hosts for their own visitors only
   safety: ["admin"], // /admin/safety: the site safety briefing visitors accept
   visitorTypes: ["admin"], // /admin/visitor-types: types, their fields and questions, photo on/off
+  watchlist: ["admin"], // /admin/watchlist: people held for an admin at check-in (FR-SEC-01..03)
+  reports: ["admin"], // /admin/audit and /admin/analytics, CSV export (FR-ROLE-02, FR-REP-01/02)
 } satisfies Record<string, StaffRole[]>;
 
 /** Where each role lands after logging in. */

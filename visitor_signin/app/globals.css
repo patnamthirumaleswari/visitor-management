@@ -191,8 +191,8 @@ a { color: var(--primary); }
 .vrow .acts { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; } .toolbar .grow { flex: 1 1 220px; }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-.tabs button { height: 34px; padding: 0 14px; border-radius: 99px; font-weight: 700; font-size: 13.5px; color: var(--ink-2); border: 1px solid var(--glass-brd); background: var(--glass); }
-.tabs button[aria-pressed="true"] { background: var(--grad); color: #fff; border-color: transparent; }
+.tabs button, .tabs a { display: inline-flex; align-items: center; text-decoration: none; height: 34px; padding: 0 14px; border-radius: 99px; font-weight: 700; font-size: 13.5px; color: var(--ink-2); border: 1px solid var(--glass-brd); background: var(--glass); }
+.tabs button[aria-pressed="true"], .tabs a[aria-current="page"] { background: var(--grad); color: #fff; border-color: transparent; }
 .prow { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--line-2); } .prow:last-child { border-bottom: 0; } .prow .main { flex: 1; min-width: 0; } .prow small { color: var(--muted); font-size: 12.5px; display: block; overflow-wrap: anywhere; }
 .fadein { animation: fadein .3s ease-out; } @keyframes fadein { from { opacity: .3; transform: translateY(4px); } }
 

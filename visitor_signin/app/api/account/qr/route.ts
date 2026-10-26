@@ -1,4 +1,5 @@
 import QRCode from "qrcode";
+import { audit, auditVisit } from "@/lib/audit";
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { EMPLOYEE_QR_PREFIX } from "@/lib/config";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 // Makes a new personal sign-in QR for the logged-in employee (FR-EMP-01), e.g. after losing
 // a printout. The old code stops working at once.
-export async function POST() {
+export async function POST(req: Request) {
   const staff = await requireStaffApi(ACCESS.account);
   if (staff instanceof NextResponse) return staff;
   if (!staff.hostId) return NextResponse.json({ error: "Your account isn't linked to an employee record." }, { status: 400 });
@@ -23,5 +24,6 @@ export async function POST() {
   if (!token) return NextResponse.json({ error: "Employee record not found." }, { status: 404 });
 
   const qr = await QRCode.toDataURL(EMPLOYEE_QR_PREFIX + token, { margin: 1, width: 400, errorCorrectionLevel: "M" });
+  audit(req, staff, "Made a new personal sign-in QR");
   return NextResponse.json({ qr });
 }

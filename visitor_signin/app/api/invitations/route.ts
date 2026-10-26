@@ -1,4 +1,5 @@
 import QRCode from "qrcode";
+import { audit, auditVisit } from "@/lib/audit";
 import { after, NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { publicBaseUrl } from "@/lib/baseUrl";
@@ -95,6 +96,7 @@ export async function POST(req: Request) {
   const qr = await QRCode.toDataURL(inviteUrl, { margin: 1, width: 400, errorCorrectionLevel: "M" });
   after(() => notifyVisitorInvited(result.visitor, result.host, result.visit, inviteUrl));
 
+  audit(req, staff, "Visitor pre-registered", `${result.visitor.name} for ${visitDate}, host ${result.host.name}`);
   return NextResponse.json({ inviteUrl, qr }, { status: 201 });
 }
 

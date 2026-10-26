@@ -11,7 +11,7 @@ export const ON_SITE: Visit["status"][] = ["signed_in", "checkout", "gate", "hol
 export const isOnSite = (v: Visit) => ON_SITE.includes(v.status);
 
 /** Visits that are still going on: waiting for approval, or on site. */
-export const isOpen = (v: Visit) => v.status === "pending" || isOnSite(v);
+export const isOpen = (v: Visit) => v.status === "pending" || v.status === "review" || isOnSite(v);
 
 /** Whether this type makes visitors wait for the host. Types saved before the setting existed do. */
 export const needsApproval = (type: Pick<VisitorType, "approvalRequired">) => type.approvalRequired !== false;
@@ -33,6 +33,7 @@ export function newNumberAndCode(d: Data): { no: number; code: string } {
 
 /** Hosts decide for their own visitors (entry and checkout); admins and reception for anyone. */
 export function canDecide(staff: Staff, visit: Visit): boolean {
+  if (visit.status === "review") return staff.role === "admin"; // watchlist match: admins only
   if (visit.status !== "pending" && visit.status !== "checkout") return false;
   if (staff.role === "admin" || staff.role === "receptionist") return true;
   return staff.role === "host" && !!staff.hostId && staff.hostId === visit.hostId;
@@ -47,7 +48,7 @@ export type Decision = "approve" | "deny";
  */
 export function decide(visit: Visit, decision: Decision, by: string, note = ""): string | null {
   if (visit.status === "checkout") return decideCheckout(visit, decision, by, note);
-  if (visit.status !== "pending") {
+  if (visit.status !== "pending" && visit.status !== "review") {
     const last = visit.decidedBy ? ` by ${visit.decidedBy}` : "";
     return visit.status === "signed_in"
       ? `Already approved${last}.`
