@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { read } from "@/lib/db";
+import { isActiveHost } from "@/lib/people";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export async function GET(req: NextRequest) {
 
   const employees = read((d) =>
     d.hosts
+      .filter((h) => isActiveHost(h))
       .filter((h) => h.name.toLowerCase().split(/\s+/).some((part) => part.startsWith(q)) || h.name.toLowerCase().startsWith(q))
       .slice(0, 8)
       .map(({ id, name, department }) => ({ id, name, department })),

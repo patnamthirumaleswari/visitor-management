@@ -16,7 +16,7 @@ type Props = {
   reapprovable: boolean;
   reapproveNote: string | null; // why "approve after all" isn't possible, for a denied visit
   canClearHold: boolean;
-  canSignOut: boolean;
+  canSignOut: boolean; // staff can end the visit (on site or still waiting)
 };
 
 export default function VisitActions({ visitId, status, canDecide, reapprovable, reapproveNote, canClearHold, canSignOut }: Props) {
@@ -33,9 +33,6 @@ export default function VisitActions({ visitId, status, canDecide, reapprovable,
     refresh();
   }
 
-  const onSite = ["signed_in", "checkout", "gate", "hold"].includes(status);
-  const nothing = !(status === "review" && canDecide) && !(status === "pending" && canDecide) && !(status === "checkout" && canDecide) && status !== "denied" &&
-    !(status === "hold" && canClearHold) && !(onSite && canSignOut);
 
   return (
     <div className="stack">
@@ -49,7 +46,7 @@ export default function VisitActions({ visitId, status, canDecide, reapprovable,
         ? <ReapproveButton visitId={visitId} onDone={refresh} />
         : reapproveNote && <p className="muted small" style={{ margin: 0 }}>{reapproveNote}</p>)}
       {status === "hold" && canClearHold && <ClearHoldButton visitId={visitId} onDone={refresh} />}
-      {onSite && canSignOut && (signingOut ? (
+      {canSignOut && (signingOut ? (
         <div className="decide-row">
           <button type="button" className="btn sm danger" onClick={signOut} disabled={busy}><Icon name="logout" />Yes, sign them out now</button>
           <button type="button" className="btn sm line" onClick={() => setSigningOut(false)} disabled={busy}>Back</button>
@@ -59,7 +56,6 @@ export default function VisitActions({ visitId, status, canDecide, reapprovable,
           <button type="button" className="btn sm line" onClick={() => setSigningOut(true)}><Icon name="logout" />Sign out</button>
         </div>
       ))}
-      {nothing && <p className="muted small" style={{ margin: 0 }}>Nothing to do for this visit right now.</p>}
     </div>
   );
 }

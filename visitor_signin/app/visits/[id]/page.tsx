@@ -5,7 +5,7 @@ import GatePass from "../../badge/GatePass";
 import Icon from "../../Icon";
 import { StatusPill } from "../../RequestList";
 import StaffShell from "../../StaffShell";
-import { canClearHold, canDecide, canReapprove, isOpen, reapproveProblem } from "@/lib/approvals";
+import { canClearHold, canDecide, canReapprove, isOnSite, isOpen, reapproveProblem } from "@/lib/approvals";
 import { homeFor, requireStaffPage } from "@/lib/auth";
 import { LOCATION } from "@/lib/config";
 import { read } from "@/lib/db";
@@ -27,6 +27,15 @@ export default async function VisitDetailsPage({ params }: { params: Promise<{ i
 
   const { visit, visitor } = pass;
   const reapproveNote = visit.status === "denied" ? read((d) => reapproveProblem(d, d.visits.find((v) => v.id === id)!)) : null;
+  // The Actions panel only shows when there's something this person can do (or a reason they can't approve after all).
+  const actions = {
+    canDecide: canDecide(staff, visit),
+    reapprovable: canReapprove(staff, visit) && reapproveNote === null,
+    reapproveNote: canReapprove(staff, visit) ? reapproveNote : null,
+    canClearHold: canClearHold(staff, visit),
+    canSignOut: (staff.role === "admin" || staff.role === "receptionist") && (isOnSite(visit) || visit.status === "pending" || visit.status === "review"),
+  };
+  const hasActions = actions.canDecide || actions.reapprovable || !!actions.reapproveNote || actions.canClearHold || actions.canSignOut;
   const initials = visitor.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
   return (
@@ -63,24 +72,19 @@ export default async function VisitDetailsPage({ params }: { params: Promise<{ i
                   {visit.signedOutAt && <><dt>Left</dt><dd>{fmt(visit.signedOutAt)}</dd></>}
                   {(visit.answers ?? []).map((a) => <Fragment key={a.questionId}><dt>{a.label}</dt><dd>{a.value}</dd></Fragment>)}
                   {visit.decisionNote && <><dt>Note</dt><dd>{visit.decisionNote}</dd></>}
+                  {visit.watch && staff.role === "admin" && <><dt>Watchlist</dt><dd style={{ color: "var(--bad)" }}>{visit.watch.reason}</dd></>}
                   {visit.hold && <><dt>Held</dt><dd style={{ color: "var(--bad)" }}>{visit.hold.reason}</dd></>}
                 </dl>
               </div>
             </section>
-            <section className="panel">
-              <div className="panel-h"><h3>Actions</h3></div>
-              <div style={{ padding: "14px 18px" }}>
-                <VisitActions
-                  visitId={visit.id}
-                  status={visit.status}
-                  canDecide={canDecide(staff, visit)}
-                  reapprovable={canReapprove(staff, visit) && reapproveNote === null}
-                  reapproveNote={canReapprove(staff, visit) ? reapproveNote : null}
-                  canClearHold={canClearHold(staff, visit)}
-                  canSignOut={staff.role === "admin" || staff.role === "receptionist"}
-                />
-              </div>
-            </section>
+            {hasActions && (
+              <section className="panel">
+                <div className="panel-h"><h3>Actions</h3></div>
+                <div style={{ padding: "14px 18px" }}>
+                  <VisitActions visitId={visit.id} status={visit.status} {...actions} />
+                </div>
+              </section>
+            )}
           </div>
 
           <div style={{ display: "grid", gap: 16, alignContent: "start" }}>

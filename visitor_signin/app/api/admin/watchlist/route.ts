@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { audit } from "@/lib/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { newId, normalizePhone, read, write, type WatchEntry } from "@/lib/db";
+import { isMobile, MOBILE_ERROR } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,8 @@ export async function POST(req: Request) {
   const phone = str(body?.phone, 30);
   const company = str(body?.company, 80);
   const reason = str(body?.reason, 200);
-  if (name.length < 2 && normalizePhone(phone).length < 6) return bad("Enter a name or a mobile number to match on.");
+  if (name.length < 2 && !phone) return bad("Enter a name or a mobile number to match on.");
+  if (phone && !isMobile(normalizePhone(phone))) return bad(MOBILE_ERROR);
   if (reason.length < 3) return bad("Say why they're on the watchlist (admins see this at check-in).");
 
   const entry: WatchEntry = { id: newId(), name, phone, company, reason, active: true, by: staff.name, at: new Date().toISOString() };

@@ -10,6 +10,10 @@ import ReceptionSignIn from "./ReceptionSignIn";
 
 export const dynamic = "force-dynamic";
 
+function PasswordLink() {
+  return <a className="button secondary" href="/account/password" style={{ width: "auto", alignSelf: "flex-start" }}>Change password</a>;
+}
+
 // The logged-in employee's own settings: how they hear about their visitors (FR-NOT-06),
 // and their PIN and personal QR for signing in at reception (FR-EMP-01).
 export default async function AccountPage() {
@@ -32,6 +36,7 @@ export default async function AccountPage() {
               Your account isn&apos;t linked to an employee record, so visitors can&apos;t choose you and you can&apos;t sign
               in at reception.
             </p>
+            <PasswordLink />
           </div>
         </main>
       </StaffShell>
@@ -60,6 +65,11 @@ export default async function AccountPage() {
         <div className="card stack">
           <h2>My notifications</h2>
           <NotificationSettings email={host.email} phone={host.phone} notifyBy={host.notifyBy?.length ? host.notifyBy : ["email"]} />
+        </div>
+
+        <div className="card stack">
+          <h2>Password</h2>
+          <PasswordLink />
         </div>
       </main>
     </StaffShell>

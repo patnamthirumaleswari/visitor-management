@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isMobile } from "@/lib/phone";
 import { isOpen } from "@/lib/approvals";
 import { normalizePhone, read } from "@/lib/db";
 
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { code?: unknown; phone?: unknown };
   const code = typeof body.code === "string" ? body.code.trim() : "";
   const phone = typeof body.phone === "string" ? normalizePhone(body.phone) : "";
-  if (!/^\d{4}$/.test(code) || phone.replace(/\D/g, "").length < 8) {
+  if (!/^\d{4}$/.test(code) || !isMobile(phone)) {
     return NextResponse.json({ error: "Enter your 4-digit visit code and your mobile number." }, { status: 400 });
   }
 

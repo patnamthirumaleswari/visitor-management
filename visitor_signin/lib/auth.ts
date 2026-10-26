@@ -9,6 +9,7 @@ import { readToken } from "./token";
 
 export const STAFF_COOKIE = "vms_staff";
 export const STAFF_SESSION_SECONDS = 8 * 60 * 60; // one working day
+export const CHANGE_PASSWORD_PATH = "/account/password";
 
 export type Staff = Omit<StaffUser, "passwordHash">;
 
@@ -25,7 +26,10 @@ export const ACCESS = {
   onsiteList: ["admin", "receptionist", "security"], // live on-site list (also the evacuation list)
   preRegister: ["admin", "receptionist", "host"], // /pre-register and creating invitations
   security: ["admin", "receptionist", "security"], // /security
-  account: ["admin", "receptionist", "host", "security"], // /account: own notification settings
+  account: ["admin", "receptionist", "host", "security"], // /account: own notification settings, password
+  inbox: ["admin", "receptionist", "host"], // /inbox: approval requests and alerts sent to you
+  people: ["admin"], // /admin/people: add staff and employees, reset passwords and PINs, switch off
+  settings: ["admin"], // /admin/settings: escalation time, sign-out time, how long records are kept
   branding: ["admin"], // /admin/branding: logo, colour, company name, welcome text
   gate: ["admin", "receptionist", "security"], // /gate: release or hold visitors leaving
   decide: ["admin", "receptionist", "host"], // approve / deny entry: hosts for their own visitors only
@@ -46,7 +50,7 @@ export async function getStaff(): Promise<Staff | null> {
   const token = readToken((await cookies()).get(STAFF_COOKIE)?.value, "staff");
   if (!token) return null;
   const user = read((d) => d.staff.find((s) => s.id === token.d));
-  if (!user) return null;
+  if (!user || user.active === false) return null; // switched off on /admin/people
   const { passwordHash: _, ...staff } = user;
   return staff;
 }
@@ -55,6 +59,8 @@ export async function getStaff(): Promise<Staff | null> {
 export async function requireStaffPage(roles: readonly StaffRole[], path: string): Promise<Staff> {
   const staff = await getStaff();
   if (!staff) redirect(`/login?next=${encodeURIComponent(path)}`);
+  // A temporary password from an admin: choose your own before anything else.
+  if (staff.mustChangePassword && path !== CHANGE_PASSWORD_PATH) redirect(`${CHANGE_PASSWORD_PATH}?next=${encodeURIComponent(path)}`);
   if (!roles.includes(staff.role)) redirect(homeFor(staff.role));
   return staff;
 }

@@ -1,7 +1,8 @@
-import { AUTO_SIGNOUT_TIME, LOCATION } from "./config";
+import { LOCATION } from "./config";
 import { read, write, type EmployeeVisit, type Visit } from "./db";
+import { getSettings } from "./settings";
 
-// Automatic end-of-day sign-out (FR-KIO-10). Anyone still signed in when AUTO_SIGNOUT_TIME passes,
+// Automatic end-of-day sign-out (FR-KIO-10). Anyone still signed in when the sign-out time (Settings) passes,
 // visitor or employee (FR-EMP-01), is signed out, with the sign-out time set to that cut-off
 // rather than to when we noticed.
 //
@@ -12,9 +13,9 @@ import { read, write, type EmployeeVisit, type Visit } from "./db";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** The first cut-off time after the visitor signed in, in the location's time zone. */
-export function autoSignOutTime(signedInAt: string): Date | null {
-  if (!AUTO_SIGNOUT_TIME) return null;
-  const [hours, minutes] = AUTO_SIGNOUT_TIME.split(":").map(Number);
+export function autoSignOutTime(signedInAt: string, time = getSettings().autoSignoutTime): Date | null {
+  if (!time) return null;
+  const [hours, minutes] = time.split(":").map(Number);
   const signedIn = new Date(signedInAt);
 
   // The calendar date at the location when they signed in, e.g. "2026-10-22".
@@ -33,43 +34,45 @@ export function autoSignOutTime(signedInAt: string): Date | null {
   return new Date(cutoff);
 }
 
-function isPastCutoff(signedInAt: string, now: number) {
-  const cutoff = autoSignOutTime(signedInAt);
+function isPastCutoff(signedInAt: string, now: number, time: string | null) {
+  const cutoff = autoSignOutTime(signedInAt, time);
   return !!cutoff && cutoff.getTime() <= now;
 }
 
 /** When the visit started counting: entry time, or check-in time for a request nobody answered. */
 const startOf = (visit: Visit) => (visit.status === "pending" || visit.status === "review" ? visit.checkedInAt : visit.signedInAt);
 
-function isDue(visit: Visit, now: number) {
+function isDue(visit: Visit, now: number, time: string | null) {
   const start = startOf(visit);
   const open = ["signed_in", "pending", "review", "checkout", "gate", "hold"].includes(visit.status);
-  return open && !!start && isPastCutoff(start, now);
+  return open && !!start && isPastCutoff(start, now, time);
 }
 
-function isEmployeeDue(visit: EmployeeVisit, now: number) {
-  return !visit.signedOutAt && isPastCutoff(visit.signedInAt, now);
+function isEmployeeDue(visit: EmployeeVisit, now: number, time: string | null) {
+  return !visit.signedOutAt && isPastCutoff(visit.signedInAt, now, time);
 }
 
 /** Signs out everyone whose cut-off has passed. Returns how many were signed out. */
 export function sweepAutoSignOut(): number {
   const now = Date.now();
+  const time = getSettings().autoSignoutTime;
+  if (!time) return 0;
   // Look first without writing, so the frequent calls don't rewrite the file every time.
-  if (!read((d) => d.visits.some((v) => isDue(v, now)) || d.employeeVisits.some((v) => isEmployeeDue(v, now)))) return 0;
+  if (!read((d) => d.visits.some((v) => isDue(v, now, time)) || d.employeeVisits.some((v) => isEmployeeDue(v, now, time)))) return 0;
 
   return write((d) => {
     let count = 0;
     for (const visit of d.visits) {
-      if (!isDue(visit, now)) continue;
+      if (!isDue(visit, now, time)) continue;
       const start = startOf(visit)!; // read before the status changes: it decides which time is used
       visit.status = "signed_out";
-      visit.signedOutAt = autoSignOutTime(start)!.toISOString();
+      visit.signedOutAt = autoSignOutTime(start, time)!.toISOString();
       visit.signedOutBy = "auto";
       count++;
     }
     for (const visit of d.employeeVisits) {
-      if (!isEmployeeDue(visit, now)) continue;
-      visit.signedOutAt = autoSignOutTime(visit.signedInAt)!.toISOString();
+      if (!isEmployeeDue(visit, now, time)) continue;
+      visit.signedOutAt = autoSignOutTime(visit.signedInAt, time)!.toISOString();
       visit.signedOutBy = "auto";
       count++;
     }

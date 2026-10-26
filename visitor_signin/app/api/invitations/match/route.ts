@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isMobile } from "@/lib/phone";
 import { normalizePhone, read } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
 import { getSignInSession } from "@/lib/session";
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const token = req.nextUrl.searchParams.get("token") ?? undefined;
   const phone = normalizePhone(req.nextUrl.searchParams.get("phone") ?? "");
-  if (!token && phone.replace(/\D/g, "").length < 8) return NextResponse.json({ invitation: null });
+  if (!token && !isMobile(phone)) return NextResponse.json({ invitation: null });
 
   const match = read((d) => {
     const found = findOpenInvitation(d, token ? { token } : { phone }, session.d);

@@ -113,6 +113,10 @@ httpOnly cookie valid for 8 hours. Every staff page and API checks the role agai
 These starting accounts are added to `data/db.json` the first time the app runs. Change them before
 anyone else can reach the app.
 
+After 5 wrong passwords for one username from one address, that pair waits 15 minutes (`lib/loginLimit.ts`).
+Switched-off accounts can't sign in, and a temporary password from an admin must be replaced at the next
+sign-in (`/account/password`).
+
 ## Signing out (FR-KIO-10)
 
 A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records which one was used.
@@ -234,6 +238,26 @@ On site -> visitor taps "Check out" (phone, or "Signing out?" at reception)
 - **CSV export** (FR-REP-02): "Download CSV" on the analytics page (`/api/admin/reports/visits?days=30`). Opens in Excel;
   cells starting with `=`, `+`, `-` or `@` are prefixed so they can't run as formulas.
 
+## People, inbox and settings
+
+- **People** (`/admin/people`, admins; FR-ADM-04): everyone in one list. **Add person** as Host, Reception,
+  Security or Admin. A host is an employee visitors can choose (with a reception PIN and QR); they can also get a
+  sign-in to approve their visitors. New sign-ins get a **temporary password**, shown once, which they replace at
+  first sign-in. Per person: **Reset password**, **Reset PIN**, **Give sign-in** (employees without one) and
+  **Switch off / on**. A switched-off person can't sign in, isn't offered to visitors or on pre-register, and can't
+  sign in at reception. You can't switch off the last admin. See `lib/people.ts`.
+- **Inbox** (`/inbox`; hosts, reception, admins): the approval requests and alerts sent to you (arrivals, approvals,
+  checkouts, gate holds; escalations for reception and admins; watchlist matches for admins), with an unread count in
+  the menu. Opening one marks it read and shows the visitor. Built from the notification records (`lib/inbox.ts`).
+- **Settings** (`/admin/settings`, admins): when to tell reception about unanswered requests (default 5 min), the
+  automatic sign-out time (default 8 pm, or off), and **how long visit records are kept** (default 90 days, matching
+  the visitor agreement). Saved in `db.json`; defaults in `lib/config.ts`, read through `lib/settings.ts`.
+- **Old records** are deleted once an hour while the reception screen or admin home is open: finished visits older
+  than the retention time, with their invitations and notifications, and visitors with no visits left (their photo
+  too). Logged in the audit log. See `lib/retention.ts`.
+- **Privacy notice** (`/privacy`): linked from the consent tick during sign-in; says how long records are kept.
+- **My account** now has **Change password** for every staff member.
+
 ## Design (InternFactory Visitor Connect)
 
 The look follows the InternFactory Visitor Connect design: frosted-glass panels over a soft indigo / sky /
@@ -269,8 +293,9 @@ If the phone can't load the page, allow Node through Windows Firewall on private
 
 - `lib/db.ts` stores everything in `data/db.json`. Swap for PostgreSQL (Prisma/Drizzle).
 - Notifications are sent from the web server once, with no retry. Move them to a job queue with retries.
-- Staff accounts are seeded, not managed: add an employee screen (FR-ADM-04) and MFA (NFR-SEC-02). The audit log lives in `db.json`; production needs tamper-proof storage.
-- Login has no rate limit yet; add one before going online.
+- Add MFA for staff (NFR-SEC-02). The audit log lives in `db.json`; production needs tamper-proof storage.
+- The login rate limit is kept in memory; with more than one server, keep it in Redis.
 - Photos and signatures are stored as data URLs. Move to S3 with encryption at rest (NFR-SEC-01).
 - Set a strong `APP_SECRET` and serve over HTTPS.
-- Single location and hard-coded visitor types in `lib/config.ts`; these become admin-managed tables.
+- Single location in `lib/config.ts`. Several sites (the demo's Locations page) need a location on every staff
+  account and per-location visitor types, safety briefing and branding.

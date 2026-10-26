@@ -3,6 +3,7 @@ import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX } from "@/lib/config";
 import { write } from "@/lib/db";
 import { checkPin, toggleEmployee, type EmployeeResult } from "@/lib/employees";
+import { isActiveHost } from "@/lib/people";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,12 @@ export async function POST(req: Request) {
   const result: EmployeeResult = write((d) => {
     if (typeof body.qr === "string") {
       const token = body.qr.startsWith(EMPLOYEE_QR_PREFIX) ? body.qr.slice(EMPLOYEE_QR_PREFIX.length) : "";
-      const host = token ? d.hosts.find((h) => h.qrToken === token) : undefined;
+      const host = token ? d.hosts.find((h) => h.qrToken === token && isActiveHost(h)) : undefined;
       if (!host) return { ok: false, error: "This isn't a valid employee QR code. Use your name and PIN instead.", status: 404 };
       return toggleEmployee(d, host, "qr");
     }
 
-    const host = typeof body.hostId === "string" ? d.hosts.find((h) => h.id === body.hostId) : undefined;
+    const host = typeof body.hostId === "string" ? d.hosts.find((h) => h.id === body.hostId && isActiveHost(h)) : undefined;
     if (!host) return { ok: false, error: "Choose your name first.", status: 400 };
     const pin = typeof body.pin === "string" ? body.pin : "";
     const problem = checkPin(host, pin);

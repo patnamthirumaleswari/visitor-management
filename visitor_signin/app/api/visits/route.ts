@@ -7,6 +7,8 @@ import { findOpenInvitation } from "@/lib/invitations";
 import { addEvent, isOpen, needsApproval, newNumberAndCode } from "@/lib/approvals";
 import { briefingFrom, getBriefing } from "@/lib/safety";
 import { findWatchMatch } from "@/lib/watchlist";
+import { isActiveHost } from "@/lib/people";
+import { isMobile, MOBILE_ERROR } from "@/lib/phone";
 import { notifyHost, notifyHostApproval, notifyWatchlistMatch } from "@/lib/notify";
 import { getSignInSession, SESSION_COOKIE } from "@/lib/session";
 import { randomToken, type TokenPayload } from "@/lib/token";
@@ -124,7 +126,7 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
   if (missing) return bad({ company: "Enter your company.", email: "Enter your email.", purpose: "Enter the purpose of your visit." }[missing]);
 
   if (name.length < 2) return bad("Enter your full name.");
-  if (phone.replace(/\D/g, "").length < 8) return bad("Enter a valid mobile number.");
+  if (!isMobile(phone)) return bad(MOBILE_ERROR);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad("Enter a valid email or leave it empty.");
   const problem = checkPhotoAndAgreement(type, body);
   if (problem) return bad(problem);
@@ -136,7 +138,7 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
   const result = write((d) => {
     // Re-check inside the write so two rapid submits can't both use the same session.
     if (d.usedSessions.includes(session.n)) return { error: SESSION_USED, status: 409 };
-    const host = d.hosts.find((h) => h.id === body.hostId);
+    const host = d.hosts.find((h) => h.id === body.hostId && isActiveHost(h));
     if (!host) return { error: "Choose who you are visiting.", status: 400 };
 
     let visitor = d.visitors.find((v) => v.phone === phone);

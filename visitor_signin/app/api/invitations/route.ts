@@ -5,6 +5,8 @@ import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { publicBaseUrl } from "@/lib/baseUrl";
 import { LOCATION } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
+import { isActiveHost } from "@/lib/people";
+import { isMobile, MOBILE_ERROR } from "@/lib/phone";
 import { newId, normalizePhone, write, type Invitation, type Visit, type Visitor } from "@/lib/db";
 import { notifyVisitorInvited } from "@/lib/notify";
 import { randomToken } from "@/lib/token";
@@ -47,14 +49,14 @@ export async function POST(req: Request) {
   const hostId = staff.role === "host" ? staff.hostId : body.hostId;
 
   if (name.length < 2) return bad("Enter the visitor's full name.");
-  if (phone.replace(/\D/g, "").length < 8) return bad("Enter a valid mobile number.");
+  if (!isMobile(phone)) return bad(MOBILE_ERROR);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad("Enter a valid email or leave it empty.");
   if (!type) return bad("Choose a visitor type.");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate)) return bad("Choose a visit date.");
   if (visitDate < todayAtLocation()) return bad("The visit date can't be in the past.");
 
   const result = write((d) => {
-    const host = d.hosts.find((h) => h.id === hostId);
+    const host = d.hosts.find((h) => h.id === hostId && isActiveHost(h));
     if (!host) return null;
 
     let visitor = d.visitors.find((v) => v.phone === phone);

@@ -3,6 +3,7 @@
 // "Find my visit" (Visitor Connect): reopen your visit screen with your visit code and mobile number.
 
 import { useState } from "react";
+import { mobileInput } from "@/lib/phone";
 import Icon from "../Icon";
 import { BADGE_STORAGE_KEY } from "@/lib/storageKeys";
 
@@ -47,8 +48,8 @@ export default function FindMyVisit() {
             onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 4))} />
         </div>
         <div>
-          <label htmlFor="find-phone">Mobile number</label>
-          <input id="find-phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <label htmlFor="find-phone">Mobile number (10 digits)</label>
+          <input id="find-phone" type="tel" inputMode="numeric" autoComplete="tel-national" value={phone} onChange={(e) => setPhone(mobileInput(e.target.value))} />
         </div>
         {error && <p className="errmsg" role="alert" style={{ margin: 0 }}><Icon name="alert" />{error}</p>}
         <button type="submit" className="btn primary lg full" disabled={busy || code.length !== 4}>{busy ? "Looking…" : "Open my visit"}</button>

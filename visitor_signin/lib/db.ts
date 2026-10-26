@@ -53,6 +53,7 @@ export type Host = {
   pinFailures?: number; // wrong PINs in a row; the PIN locks after MAX_PIN_FAILURES
   pinLockedUntil?: string;
   qrToken?: string;
+  active?: boolean; // false = switched off on /admin/people: visitors can't choose them, no reception sign-in
 };
 
 // An employee's day at the office: signed in at reception, signed out when they leave (FR-EMP-01).
@@ -131,6 +132,7 @@ export type Notification = {
   status: "logged" | "sent" | "failed";
   error?: string;
   sentAt: string;
+  readBy?: string[]; // staff ids who opened it in their inbox
 };
 
 // The invite a host sends before the visit (FR-PRE-02). qrToken is what the invite link/QR carries.
@@ -155,6 +157,8 @@ export type StaffUser = {
   role: StaffRole;
   hostId?: string;
   passwordHash: string;
+  active?: boolean; // false = switched off on /admin/people: can't sign in
+  mustChangePassword?: boolean; // set with a temporary password; they choose their own at next sign-in
 };
 
 // Company branding set on /admin/branding (FR-KIO-03, FR-BAD-02, FR-ADM-06). Missing fields
@@ -188,6 +192,7 @@ export type SafetyBriefing = {
 export type Data = {
   audit?: import("./audit").AuditEntry[]; // audit log, newest first (FR-ROLE-02)
   counters?: { visitNo: number }; // last visitor number handed out
+  settings?: { escalateMinutes?: number; autoSignoutTime?: string; retentionDays?: number }; // see lib/settings.ts
   watchlist?: WatchEntry[];
   safety?: SafetyBriefing; // missing until an admin saves one: the starting briefing in lib/safety.ts applies
   visitorTypes: VisitorType[];

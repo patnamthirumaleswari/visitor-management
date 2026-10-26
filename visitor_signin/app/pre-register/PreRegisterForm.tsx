@@ -5,6 +5,7 @@
 // Invitations are now saved on the server, so reception can recognise the visitor on arrival.
 
 import { useState } from "react";
+import { mobileInput } from "@/lib/phone";
 import type { VisitorType } from "@/lib/db";
 import { formatDay } from "@/lib/dates";
 
@@ -25,7 +26,8 @@ export default function PreRegisterForm({ hosts, visitorTypes, today }: Props) {
   const [copied, setCopied] = useState(false);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: name === "phone" ? mobileInput(value) : value });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -101,8 +103,8 @@ export default function PreRegisterForm({ hosts, visitorTypes, today }: Props) {
             <input id="visitorName" name="visitorName" value={form.visitorName} onChange={handleChange} required />
           </div>
           <div>
-            <label htmlFor="phone">Visitor mobile number</label>
-            <input id="phone" name="phone" type="tel" inputMode="tel" value={form.phone} onChange={handleChange} required />
+            <label htmlFor="phone">Visitor mobile number (10 digits)</label>
+            <input id="phone" name="phone" type="tel" inputMode="numeric" pattern="\d{10}" title="10 digits" value={form.phone} onChange={handleChange} required />
           </div>
           <div>
             <label htmlFor="email">Visitor email (optional)</label>

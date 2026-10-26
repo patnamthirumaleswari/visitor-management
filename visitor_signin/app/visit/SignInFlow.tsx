@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isMobile, mobileInput, MOBILE_ERROR } from "@/lib/phone";
 import type { ResolvedBranding } from "@/lib/branding";
 import type { BriefingView } from "@/lib/safety";
 import SafetyBriefingView from "../SafetyBriefingView";
@@ -50,6 +51,7 @@ export default function SignInFlow({ location, brand, briefing, visitorTypes, ag
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState({ phone: false, email: false }); // show field errors after leaving the field
 
   // Invited visitors skip the form and host search (requirements §6 flow: "QR invite? yes: skip the form").
   // "welcome" and "scan" come before either path, so they aren't counted in the progress bar.
@@ -135,7 +137,7 @@ export default function SignInFlow({ location, brand, briefing, visitorTypes, ag
   // Once the phone number looks complete: an invitation for today wins; otherwise pre-fill a
   // returning visitor's name/company (FR-KIO-08).
   const lookupPhone = async (phone: string) => {
-    if (phone.replace(/\D/g, "").length < 8) return;
+    if (!isMobile(phone)) return;
     const inv = await findInvitation(`phone=${encodeURIComponent(phone)}`);
     if (inv) return applyInvitation(inv);
     try {
@@ -180,9 +182,12 @@ export default function SignInFlow({ location, brand, briefing, visitorTypes, ag
     }
   };
 
+  // Same rules as the server, so mistakes are fixed here rather than after the last step.
+  const phoneOk = isMobile(details.phone);
+  const emailOk = !details.email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email.trim());
   const canContinue =
     step === "type" ? !!type :
-    step === "details" ? details.name.trim().length > 1 && details.phone.replace(/\D/g, "").length >= 8 &&
+    step === "details" ? details.name.trim().length > 1 && phoneOk && (modeOf("email") === "hidden" || emailOk) &&
       (["email", "company", "purpose"] as const).every((f) => modeOf(f) !== "required" || !!details[f].trim()) :
     step === "host" ? !!host :
     step === "invite" ? true :
@@ -274,13 +279,16 @@ export default function SignInFlow({ location, brand, briefing, visitorTypes, ag
         {step === "details" && (
           <>
             <h1>Your details</h1>
-            <Field label="Mobile number" type="tel" autoComplete="tel" inputMode="tel" value={details.phone}
-              onChange={(v) => setDetails({ ...details, phone: v })} onBlur={() => lookupPhone(details.phone)} />
+            <Field label="Mobile number (10 digits)" type="tel" autoComplete="tel-national" inputMode="numeric" value={details.phone}
+              onChange={(v) => setDetails({ ...details, phone: mobileInput(v) })} onBlur={() => { setTouched((t) => ({ ...t, phone: true })); lookupPhone(details.phone); }}
+              error={touched.phone && !phoneOk ? MOBILE_ERROR : undefined} />
             {returning && <p className="notice">Welcome back! We've filled in your details from last time.</p>}
             <Field label="Full name" autoComplete="name" value={details.name} onChange={(v) => setDetails({ ...details, name: v })} />
             {/* Each type chooses which of these it asks, and which are required (FR-KIO-05). */}
             {modeOf("email") !== "hidden" && (
-              <Field label={labelFor("Email", "email")} type="email" autoComplete="email" value={details.email} onChange={(v) => setDetails({ ...details, email: v })} />
+              <Field label={labelFor("Email", "email")} type="email" autoComplete="email" value={details.email} onChange={(v) => setDetails({ ...details, email: v })}
+                onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                error={touched.email && !emailOk ? "Enter a valid email (like name@company.com) or leave it empty." : undefined} />
             )}
             {modeOf("company") !== "hidden" && (
               <Field label={labelFor("Company", "company")} autoComplete="organization" value={details.company} onChange={(v) => setDetails({ ...details, company: v })} />
@@ -327,7 +335,10 @@ export default function SignInFlow({ location, brand, briefing, visitorTypes, ag
             </label>
             <label className="tick">
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-              <span>I agree that {brand.companyName} may record my details and photo to manage this visit and for site security.</span>
+              <span>
+                I agree that {brand.companyName} may record my details and photo to manage this visit and for site security.{" "}
+                <a href="/privacy" target="_blank" rel="noopener">Privacy notice</a>
+              </span>
             </label>
           </>
         )}
@@ -386,13 +397,18 @@ function Field(props: {
   type?: string;
   autoComplete?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
+  error?: string; // shown under the field, and the field is marked invalid
 }) {
   const id = props.label.toLowerCase().replace(/\W+/g, "-");
   return (
     <div>
       <label htmlFor={id}>{props.label}</label>
-      <input id={id} type={props.type ?? "text"} autoComplete={props.autoComplete} inputMode={props.inputMode}
-        value={props.value} onChange={(e) => props.onChange(e.target.value)} onBlur={props.onBlur} />
+      <input id={id} type={props.type ?? "text"} autoComplete={props.autoComplete} inputMode={props.inputMode} maxLength={props.maxLength}
+        value={props.value} onChange={(e) => props.onChange(e.target.value)} onBlur={props.onBlur}
+        aria-invalid={!!props.error} aria-describedby={props.error ? `${id}-error` : undefined}
+        style={props.error ? { borderColor: "var(--bad)" } : undefined} />
+      {props.error && <p id={`${id}-error`} className="error" role="alert" style={{ margin: "6px 0 0" }}>{props.error}</p>}
     </div>
   );
 }

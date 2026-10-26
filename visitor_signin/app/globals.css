@@ -153,6 +153,7 @@ a { color: var(--primary); }
 .navlist a:hover { background: var(--sunken); }
 .navlist a[aria-current="page"] { background: var(--grad); color: #fff; box-shadow: 0 8px 20px -8px rgb(79 70 229 / .65); }
 .navlist .count-badge { margin-left: auto; }
+.bottomnav .count-badge { position: absolute; top: 2px; left: calc(50% + 4px); }
 .locsw { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border-radius: 15px; text-align: left; margin-top: 16px; background: var(--glass-strong); border: 1px solid var(--glass-brd); }
 .locsw .lic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--gold-soft); color: var(--primary); flex: none; }
 .locsw small { display: block; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 800; } .locsw b { font-size: 14px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
