@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { getBranding, isHexColor } from "@/lib/branding";
 import { write } from "@/lib/db";
@@ -13,7 +14,6 @@ type Body = { companyName?: unknown; welcomeText?: unknown; primaryColor?: unkno
 const clean = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 // Admin saves the company branding (FR-ADM-06). Admins only (NFR-SEC-03).
-// TODO: write to the audit log (FR-ROLE-02).
 export async function PUT(req: Request) {
   const staff = await requireStaffApi(ACCESS.branding);
   if (staff instanceof NextResponse) return staff;
@@ -51,6 +51,7 @@ export async function PUT(req: Request) {
       updatedAt: new Date().toISOString(),
     };
   });
+  audit(req, staff, "Branding changed", `${companyName}${logo === null ? " · logo removed" : logo ? " · new logo" : ""}`);
   return NextResponse.json(getBranding());
 }
 

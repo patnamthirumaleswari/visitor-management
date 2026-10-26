@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { canDecide, decide, type Decision } from "@/lib/approvals";
 import { ACCESS, ROLE_LABELS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
@@ -8,7 +9,6 @@ export const dynamic = "force-dynamic";
 // Answer a waiting visitor from the staff screens (Visitor Connect): entry (approve / deny), or a
 // checkout request (approve = cleared for the gate, deny = "not yet").
 // Hosts can answer for their own visitors; admins and reception for anyone.
-// TODO: write to the audit log (FR-ROLE-02).
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaffApi(ACCESS.decide);
   if (staff instanceof NextResponse) return staff;
@@ -22,6 +22,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const result = write((d) => {
     const visit = d.visits.find((v) => v.id === id);
     if (!visit) return { error: "Visit not found.", status: 404 };
+    if (visit.status === "review" && !canDecide(staff, visit)) {
+      return { error: "Only an admin can answer this one.", status: 403 }; // watchlist match
+    }
     if ((visit.status === "pending" || visit.status === "checkout") && !canDecide(staff, visit)) {
       return { error: "Only this visitor's host, reception or an admin can answer.", status: 403 };
     }
@@ -32,5 +35,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+  const action = decision === "approve"
+    ? (result.visitStatus === "gate" ? "Checkout approved" : "Entry approved")
+    : (result.visitStatus === "denied" ? "Entry not approved" : "Checkout declined");
+  auditVisit(req, staff, action, id, note ? `Note: ${note}` : "");
   return NextResponse.json({ status: result.visitStatus });
 }

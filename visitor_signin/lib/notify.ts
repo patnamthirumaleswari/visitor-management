@@ -168,6 +168,20 @@ export async function notifyHostHold(host: Host, visitor: Visitor, visit: Visit)
   );
 }
 
+/** Watchlist match at check-in: tell admins (via RECEPTION_EMAIL), not the host. */
+export async function notifyWatchlistMatch(visitor: Visitor, visit: Visit) {
+  const to = process.env.RECEPTION_EMAIL?.trim() || "admins (RECEPTION_EMAIL not set)";
+  const text = `Watchlist match: ${visitor.name} (visitor no. ${visit.no ?? ""}) has checked in and is waiting for an admin. Reason on the list: ${visit.watch?.reason ?? ""}. Sign in as an admin to approve or deny.`;
+  return deliver({ kind: "watchlist", visitId: visit.id, channel: "email", to }, () =>
+    sendEmail({
+      to: process.env.RECEPTION_EMAIL?.trim() || "reception@localhost",
+      subject: `Watchlist match: ${visitor.name} needs an admin's decision`,
+      text,
+      html: emailLayout(`<h2 style="margin:0 0 12px">Watchlist match: ${escapeHtml(visitor.name)}</h2><p>${escapeHtml(text)}</p>`),
+    }),
+  );
+}
+
 /** Nobody answered in time: tell reception (RECEPTION_EMAIL in .env.local), or log it. */
 export async function notifyReceptionEscalated(visit: Visit, visitorName: string, hostName: string) {
   const to = process.env.RECEPTION_EMAIL?.trim() || "reception (RECEPTION_EMAIL not set)";

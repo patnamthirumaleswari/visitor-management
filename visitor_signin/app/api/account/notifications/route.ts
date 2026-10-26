@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { write, type NotificationChannel } from "@/lib/db";
 
@@ -32,5 +33,6 @@ export async function PUT(req: Request) {
     return true;
   });
   if (!saved) return NextResponse.json({ error: "Host not found." }, { status: 404 });
+  audit(req, staff, "Changed own notification settings", notifyBy.join(" + "));
   return NextResponse.json({ notifyBy });
 }

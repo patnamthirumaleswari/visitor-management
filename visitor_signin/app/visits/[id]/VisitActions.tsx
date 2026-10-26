@@ -34,11 +34,12 @@ export default function VisitActions({ visitId, status, canDecide, reapprovable,
   }
 
   const onSite = ["signed_in", "checkout", "gate", "hold"].includes(status);
-  const nothing = !(status === "pending" && canDecide) && !(status === "checkout" && canDecide) && status !== "denied" &&
+  const nothing = !(status === "review" && canDecide) && !(status === "pending" && canDecide) && !(status === "checkout" && canDecide) && status !== "denied" &&
     !(status === "hold" && canClearHold) && !(onSite && canSignOut);
 
   return (
     <div className="stack">
+      {status === "review" && canDecide && <DecisionButtons endpoint={`/api/staff/visits/${visitId}/decide`} onDone={refresh} />}
       {status === "pending" && canDecide && <DecisionButtons endpoint={`/api/staff/visits/${visitId}/decide`} onDone={refresh} />}
       {status === "checkout" && canDecide && (
         <DecisionButtons endpoint={`/api/staff/visits/${visitId}/decide`} onDone={refresh}

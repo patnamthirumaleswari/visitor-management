@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { audit, auditVisit } from "@/lib/audit";
 import { after, NextResponse } from "next/server";
 import { requestCheckout } from "@/lib/approvals";
 import { write } from "@/lib/db";
@@ -29,6 +30,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
   const n = result.notify;
   if (n) after(() => notifyHostCheckout(n.host, n.visitor, n.visit));
+  auditVisit(req, { name: "Visitor (own phone)", role: "Visitor" }, "Checkout requested", id);
   return NextResponse.json({ status: result.visitStatus });
 }
 

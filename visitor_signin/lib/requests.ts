@@ -30,6 +30,7 @@ export type RequestRow = {
   checkoutRequestedAt?: string;
   checkoutNote?: string;
   holdReason?: string;
+  watchReason?: string; // why they're on the watchlist (shown to admins)
   reapprovable: boolean; // denied today and not checked in again: the host can approve after all
 };
 
@@ -58,23 +59,26 @@ export function toRow(d: Data, v: Visit): RequestRow {
     checkoutRequestedAt: v.checkoutRequestedAt,
     checkoutNote: v.checkoutNote,
     holdReason: v.hold?.reason,
+    watchReason: v.watch?.reason,
     reapprovable: v.status === "denied" && reapproveProblem(d, v) === null,
     // while checking out, "waiting" counts from the checkout request
     ...(v.status === "checkout" ? { waitingMinutes: minutesSince(v.checkoutRequestedAt), escalated: !!v.checkoutEscalated } : {}),
   };
 }
 
-const NEEDS_ANSWER: Visit["status"][] = ["pending", "checkout", "hold"];
+const NEEDS_ANSWER: Visit["status"][] = ["pending", "review", "checkout", "hold"];
 
 /**
  * Everything this person can answer: entry requests, checkout requests and gate holds.
  * A host sees their own visitors; admins and reception see everyone's. Oldest first.
  */
 export function pendingFor(staff: Staff): RequestRow[] {
-  const since = (v: Visit) => (v.status === "pending" ? v.checkedInAt : v.status === "hold" ? v.hold?.at : v.checkoutRequestedAt) ?? "";
+  const since = (v: Visit) => (v.status === "pending" || v.status === "review" ? v.checkedInAt : v.status === "hold" ? v.hold?.at : v.checkoutRequestedAt) ?? "";
   return read((d) =>
     d.visits
       .filter((v) => NEEDS_ANSWER.includes(v.status) && (staff.role !== "host" || v.hostId === staff.hostId))
+      // watchlist reviews go to admins only (FR-SEC-02); hosts and reception aren't shown them
+      .filter((v) => v.status !== "review" || staff.role === "admin")
       .sort((a, b) => since(a).localeCompare(since(b)))
       .map((v) => toRow(d, v)),
   );

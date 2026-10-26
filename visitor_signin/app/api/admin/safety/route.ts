@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { write, type SafetyRule } from "@/lib/db";
 import { briefingFrom, RULE_KINDS } from "@/lib/safety";
@@ -12,7 +13,7 @@ const MAX_PLAN_CHARS = 900_000; // the page shrinks pictures to 1200 px first, s
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 // Admin saves the site safety briefing (Visitor Connect). If anything visitors see changed, it becomes
-// a new version, and new visits record that version. Admins only. TODO: audit log (FR-ROLE-02).
+// a new version, and new visits record that version. Admins only.
 export async function PUT(req: Request) {
   const staff = await requireStaffApi(ACCESS.safety);
   if (staff instanceof NextResponse) return staff;
@@ -62,6 +63,7 @@ export async function PUT(req: Request) {
     return d.safety;
   });
 
+  audit(req, staff, "Safety briefing saved", `Version ${saved.version}${saved.enabled ? "" : " (switched off)"}`);
   return NextResponse.json({ briefing: saved });
 }
 

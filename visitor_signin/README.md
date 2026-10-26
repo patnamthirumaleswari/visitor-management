@@ -220,6 +220,20 @@ On site -> visitor taps "Check out" (phone, or "Signing out?" at reception)
 - Rule kinds and icons: `lib/safetyRules.ts`; starting briefing and helpers: `lib/safety.ts`.
 - The NDA pages at `/nda` are separate and unchanged.
 
+## Watchlist, audit log and reports
+
+- **Watchlist** (`/admin/watchlist`, admins; FR-SEC-01..03): add a person by name and/or mobile number with a reason.
+  When someone on the list checks in (walk-in or invited) they're matched on mobile number or exact full name and held
+  as **Watchlist review**. Only admins see and decide it (under "Needs your answer"); the host isn't asked or told,
+  and the visitor's phone just says "Please wait at reception". Entries can be paused or removed. See `lib/watchlist.ts`.
+- **Audit log** (`/admin/audit`, admins; FR-ROLE-02): staff sign-ins (and failed attempts), approvals, gate actions,
+  sign-outs, settings changes, watchlist changes and report downloads, with who, role, details and IP. Searchable;
+  keeps the last 5,000 entries. Written by `audit()` in `lib/audit.ts`.
+- **Analytics** (`/admin/analytics`, admins; FR-REP-01): visits, average time to approve, average stay and % not
+  approved for the last 7, 14 or 30 days, with charts of visits per day and busiest hours, top hosts and visitor types.
+- **CSV export** (FR-REP-02): "Download CSV" on the analytics page (`/api/admin/reports/visits?days=30`). Opens in Excel;
+  cells starting with `=`, `+`, `-` or `@` are prefixed so they can't run as formulas.
+
 ## Design (InternFactory Visitor Connect)
 
 The look follows the InternFactory Visitor Connect design: frosted-glass panels over a soft indigo / sky /
@@ -255,7 +269,7 @@ If the phone can't load the page, allow Node through Windows Firewall on private
 
 - `lib/db.ts` stores everything in `data/db.json`. Swap for PostgreSQL (Prisma/Drizzle).
 - Notifications are sent from the web server once, with no retry. Move them to a job queue with retries.
-- Staff accounts are seeded, not managed: add an employee screen (FR-ADM-04), MFA (NFR-SEC-02) and audit logging (FR-ROLE-02).
+- Staff accounts are seeded, not managed: add an employee screen (FR-ADM-04) and MFA (NFR-SEC-02). The audit log lives in `db.json`; production needs tamper-proof storage.
 - Login has no rate limit yet; add one before going online.
 - Photos and signatures are stored as data URLs. Move to S3 with encryption at rest (NFR-SEC-01).
 - Set a strong `APP_SECRET` and serve over HTTPS.

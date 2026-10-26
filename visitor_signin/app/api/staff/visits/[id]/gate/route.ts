@@ -1,4 +1,5 @@
 import { after, NextResponse } from "next/server";
+import { audit, auditVisit } from "@/lib/audit";
 import { canClearHold, canWorkGate, clearHold, gateHold, gateRelease } from "@/lib/approvals";
 import { ROLE_LABELS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 type Action = "release" | "hold" | "clear";
 
 // At the gate (Visitor Connect): security releases a cleared visitor, or holds them with a reason;
-// the visitor's host, reception or an admin clears a hold. TODO: write to the audit log (FR-ROLE-02).
+// the visitor's host, reception or an admin clears a hold.
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const staff = await requireStaffApi(["admin", "receptionist", "security", "host"]);
   if (staff instanceof NextResponse) return staff;
@@ -40,5 +41,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
   const held = "held" in result ? result.held : null;
   if (held) after(() => notifyHostHold(held.host, held.visitor, held.visit));
+  auditVisit(req, staff, { release: "Released at gate", hold: "Held at gate", clear: "Hold cleared" }[action], id, reason ? `Reason: ${reason}` : "");
   return NextResponse.json({ status: result.visitStatus });
 }
