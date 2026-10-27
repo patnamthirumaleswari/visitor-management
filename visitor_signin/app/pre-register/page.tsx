@@ -2,6 +2,7 @@ import StaffShell from "../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { todayAtLocation } from "@/lib/dates";
 import { read } from "@/lib/db";
+import { isActiveHost } from "@/lib/people";
 import { getActiveVisitorTypes } from "@/lib/visitorTypes";
 import PreRegisterForm from "./PreRegisterForm";
 
@@ -13,7 +14,7 @@ export default async function PreRegisterPage() {
   const staff = await requireStaffPage(ACCESS.preRegister, "/pre-register");
   const hosts = read((d) =>
     d.hosts
-      .filter((h) => staff.role !== "host" || h.id === staff.hostId)
+      .filter((h) => isActiveHost(h) && (staff.role !== "host" || h.id === staff.hostId))
       .map(({ id, name, department }) => ({ id, name, department })),
   );
   return (

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isMobile } from "@/lib/phone";
 import { normalizePhone, read } from "@/lib/db";
 import { getSignInSession } from "@/lib/session";
 
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
   }
 
   const phone = normalizePhone(req.nextUrl.searchParams.get("phone") ?? "");
-  if (phone.replace(/\D/g, "").length < 8) return NextResponse.json({ visitor: null });
+  if (!isMobile(phone)) return NextResponse.json({ visitor: null });
 
   const visitor = read((d) => d.visitors.find((v) => v.phone === phone));
   return NextResponse.json({ visitor: visitor ? { name: visitor.name, company: visitor.company } : null });

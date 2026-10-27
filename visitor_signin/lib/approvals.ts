@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { ESCALATE_MINUTES, FIRST_VISIT_NO, LOCATION } from "./config";
+import { FIRST_VISIT_NO, LOCATION } from "./config";
+import { getSettings } from "./settings";
 import { read, write, type Data, type Visit, type VisitorType } from "./db";
 import type { Staff } from "./auth";
 
@@ -181,12 +182,13 @@ export function clearHold(visit: Visit, by: string, note = ""): string | null {
 }
 
 /**
- * Requests nobody answered within ESCALATE_MINUTES get marked escalated, so they stand out on the
+ * Requests nobody answered within the escalation time (Settings) get marked escalated, so they stand out on the
  * staff screens. Returns the newly escalated visits, so the caller can tell reception.
  * There's no scheduler in this prototype: it runs when staff screens or the reception screen load data.
  */
 export function sweepEscalations(): Visit[] {
-  const late = (iso: string | undefined, now: number) => !!iso && now - new Date(iso).getTime() >= ESCALATE_MINUTES * 60_000;
+  const escalateMinutes = getSettings().escalateMinutes;
+  const late = (iso: string | undefined, now: number) => !!iso && now - new Date(iso).getTime() >= escalateMinutes * 60_000;
   const due = (v: Visit, now: number) =>
     (v.status === "pending" && !v.escalated && late(v.checkedInAt, now)) ||
     (v.status === "checkout" && !v.checkoutEscalated && late(v.checkoutRequestedAt, now));
@@ -197,10 +199,10 @@ export function sweepEscalations(): Visit[] {
     for (const v of hit) {
       if (v.status === "checkout") {
         v.checkoutEscalated = true;
-        addEvent(v, `Checkout not answered in ${ESCALATE_MINUTES} min: reception told`, "System");
+        addEvent(v, `Checkout not answered in ${escalateMinutes} min: reception told`, "System");
       } else {
         v.escalated = true;
-        addEvent(v, `No reply from host in ${ESCALATE_MINUTES} min: reception told`, "System");
+        addEvent(v, `No reply from host in ${escalateMinutes} min: reception told`, "System");
       }
     }
     return hit.map((v) => ({ ...v }));

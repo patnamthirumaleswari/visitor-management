@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { mobileInput } from "@/lib/phone";
 import Icon from "../../Icon";
 import type { WatchEntry } from "@/lib/db";
 import { LOCATION } from "@/lib/config";
@@ -70,7 +71,7 @@ export default function WatchlistManager({ initial }: { initial: WatchEntry[] })
         <p className="muted small" style={{ margin: 0 }}>We match on the mobile number, or on the exact full name (not case sensitive).</p>
         <div className="row" style={{ flexWrap: "wrap" }}>
           <label className="field"><span>Full name</span><input value={form.name} onChange={set("name")} maxLength={80} /></label>
-          <label className="field"><span>Mobile number</span><input value={form.phone} onChange={set("phone")} maxLength={30} inputMode="tel" /></label>
+          <label className="field"><span>Mobile number</span><input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: mobileInput(e.target.value) }))} inputMode="numeric" placeholder="10 digits" /></label>
           <label className="field"><span>Company</span><input value={form.company} onChange={set("company")} maxLength={80} /></label>
         </div>
         <label className="field"><span>Reason <span className="req">*</span></span><input value={form.reason} onChange={set("reason")} maxLength={200} placeholder="e.g. Banned after an incident on 3 Oct" /></label>
