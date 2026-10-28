@@ -1,10 +1,10 @@
 import Icon from "./Icon";
 import Logo from "./Logo";
-import { isOnSite } from "@/lib/approvals";
+import { ON_SITE } from "@/lib/approvals";
+import { countVisits, findVisits } from "@/lib/repos/visits";
 import { getBranding } from "@/lib/services/branding";
 import { LOCATION } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
-import { read } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +16,12 @@ export default async function Home() {
   const dayOf = (iso?: string) =>
     iso ? new Intl.DateTimeFormat("en-CA", { timeZone: LOCATION.timezone }).format(new Date(iso)) : "";
 
-  const stats = read((d) => ({
-    onSite: d.visits.filter(isOnSite).length,
-    today: d.visits.filter((v) => dayOf(v.signedInAt) === today).length,
-    expected: d.visits.filter((v) => v.status === "expected" && v.expectedDate === today).length,
-  }));
+  const recent = await findVisits({ signedInAt: { gte: new Date(Date.now() - 36 * 3600_000) } }); // covers "today" in any time zone
+  const stats = {
+    onSite: await countVisits({ status: { in: ON_SITE } }),
+    today: recent.filter((v) => dayOf(v.signedInAt) === today).length,
+    expected: await countVisits({ status: "expected", expectedDate: today }),
+  };
 
   const roles = [
     { href: "/login?role=host", icon: "users" as const, label: "Employee", hint: "Hosts: approve your visitors" },

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { activityFor } from "@/lib/activity";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { checkEscalations } from "@/lib/requests";
+import { checkEscalations } from "@/lib/services/requests";
 
 export const dynamic = "force-dynamic";
 

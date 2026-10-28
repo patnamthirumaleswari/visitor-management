@@ -1,4 +1,4 @@
-import type { VisitorType } from "../db";
+import type { VisitorType } from "../types";
 import {
   createVisitorType,
   deleteVisitorType,

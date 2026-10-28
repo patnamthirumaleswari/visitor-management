@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { read } from "@/lib/db";
+import { listHosts } from "@/lib/repos/hosts";
 import { isActiveHost } from "@/lib/services/people";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +12,10 @@ export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
   if (q.length < 2) return NextResponse.json({ employees: [] });
 
-  const employees = read((d) =>
-    d.hosts
+  const employees = (await listHosts())
       .filter((h) => isActiveHost(h))
       .filter((h) => h.name.toLowerCase().split(/\s+/).some((part) => part.startsWith(q)) || h.name.toLowerCase().startsWith(q))
       .slice(0, 8)
-      .map(({ id, name, department }) => ({ id, name, department })),
-  );
+      .map(({ id, name, department }) => ({ id, name, department }));
   return NextResponse.json({ employees });
 }

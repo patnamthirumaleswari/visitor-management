@@ -1,7 +1,8 @@
 import type { ResolvedBranding } from "./branding";
 import { getBranding } from "./services/branding";
 import { LOCATION } from "./config";
-import { read, type Visit } from "./db";
+import type { Visit } from "./types";
+import { findVisitWithPeople } from "./repos/visits";
 import { typeDisplay } from "./visitorTypes";
 import { listVisitorTypes } from "./services/visitorTypes";
 
@@ -19,14 +20,12 @@ export type PassData = {
 
 /** Loads a pass. The visitor passes their badge token; staff pages pass null after their own login check. */
 export async function loadPass(visitId: string, token: string | null): Promise<PassData | null> {
-  const [types, branding] = await Promise.all([listVisitorTypes(), getBranding()]);
-  return read((d) => {
-    const visit = d.visits.find((v) => v.id === visitId);
-    if (!visit || visit.status === "expected") return null;
-    if (token !== null && visit.badgeToken !== token) return null;
-    const visitor = d.visitors.find((p) => p.id === visit.visitorId);
-    const host = d.hosts.find((h) => h.id === visit.hostId);
-    return {
+  const [types, branding, found] = await Promise.all([listVisitorTypes(), getBranding(), findVisitWithPeople(visitId)]);
+  if (!found) return null;
+  const { visit, visitor, host } = found;
+  if (visit.status === "expected") return null;
+  if (token !== null && visit.badgeToken !== token) return null;
+  return {
       visit,
       branding,
       locationName: `${LOCATION.company} · ${LOCATION.name}`,
@@ -40,8 +39,7 @@ export async function loadPass(visitId: string, token: string | null): Promise<P
       hostName: host?.name ?? "",
       hostDepartment: host?.department ?? "",
       typeLabel: typeDisplay(types, visit.visitorType).label,
-    };
-  });
+  };
 }
 
 /** The four steps on the pass, from the visit's timeline: when, and who did it. */

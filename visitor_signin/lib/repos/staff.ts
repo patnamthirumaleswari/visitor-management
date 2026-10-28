@@ -1,5 +1,5 @@
 import type { StaffUser as StaffRow } from "@prisma/client";
-import type { StaffRole, StaffUser } from "../db";
+import type { StaffRole, StaffUser } from "../types";
 import { prisma } from "../prisma";
 
 // Staff sign-ins (table StaffUser). Returns the app's StaffUser shape, so callers don't depend on Prisma.

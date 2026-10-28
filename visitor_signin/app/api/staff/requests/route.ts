@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { checkEscalations, pendingFor, todayForHost } from "@/lib/requests";
+import { checkEscalations, pendingFor, todayForHost } from "@/lib/services/requests";
 
 export const dynamic = "force-dynamic";
 

@@ -3,8 +3,7 @@ import StaffShell from "../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX, LOCATION } from "@/lib/config";
-import { read } from "@/lib/db";
-import { openEmployeeVisit } from "@/lib/employees";
+import { findOpenEmployeeVisit } from "@/lib/repos/employeeVisits";
 import { findHostById } from "@/lib/repos/hosts";
 import NotificationSettings from "./NotificationSettings";
 import ReceptionSignIn from "./ReceptionSignIn";
@@ -21,8 +20,7 @@ export default async function AccountPage() {
   const staff = await requireStaffPage(ACCESS.account, "/account");
   await sweepAutoSignOut(); // don't show "signed in since" for yesterday's forgotten sign-out
   const employee = staff.hostId ? await findHostById(staff.hostId) : null;
-  // TODO(module 6): read the open reception sign-in from Supabase.
-  const found = employee ? { host: employee, open: read((d) => openEmployeeVisit(d, employee.id)) } : undefined;
+  const found = employee ? { host: employee, open: await findOpenEmployeeVisit(employee.id) } : undefined;
 
   if (!found) {
     return (

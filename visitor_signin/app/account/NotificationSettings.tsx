@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { NotificationChannel } from "@/lib/db";
+import type { NotificationChannel } from "@/lib/types";
 
 type Props = { email: string; phone: string; notifyBy: NotificationChannel[] };
 

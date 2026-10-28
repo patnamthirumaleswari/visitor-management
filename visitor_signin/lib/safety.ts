@@ -1,5 +1,5 @@
 import { LOCATION } from "./config";
-import type { SafetyBriefing } from "./db";
+import type { SafetyBriefing } from "./types";
 export { RULE_KINDS } from "./safetyRules";
 
 // Site safety briefing (Visitor Connect): emergency number, assembly point, notes, site rules with

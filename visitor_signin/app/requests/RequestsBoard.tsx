@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Icon from "../Icon";
 import RequestList from "../RequestList";
-import type { RequestRow } from "@/lib/requests";
+import type { RequestRow } from "@/lib/services/requests";
 
 export default function RequestsBoard({ firstName, locationName }: { firstName: string; locationName: string }) {
   const [pending, setPending] = useState<RequestRow[]>([]);

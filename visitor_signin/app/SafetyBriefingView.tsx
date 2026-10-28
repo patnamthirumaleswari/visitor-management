@@ -4,7 +4,7 @@
 
 import Icon from "./Icon";
 import { RULE_KINDS } from "@/lib/safetyRules";
-import type { SafetyBriefing } from "@/lib/db";
+import type { SafetyBriefing } from "@/lib/types";
 
 export default function SafetyBriefingView({ briefing }: { briefing: Pick<SafetyBriefing, "emergencyPhone" | "assemblyPoint" | "notes" | "rules" | "exitPlan"> }) {
   return (

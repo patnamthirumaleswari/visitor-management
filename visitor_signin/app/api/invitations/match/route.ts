@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isMobile } from "@/lib/phone";
-import { normalizePhone, read } from "@/lib/db";
-import { findOpenInvitation } from "@/lib/invitations";
+import { normalizePhone } from "@/lib/types";
+import { findOpenInvitation } from "@/lib/services/invitations";
 import { getSignInSession } from "@/lib/session";
 import { findVisitorType } from "@/lib/services/visitorTypes";
 
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const phone = normalizePhone(req.nextUrl.searchParams.get("phone") ?? "");
   if (!token && !isMobile(phone)) return NextResponse.json({ invitation: null });
 
-  const found = read((d) => findOpenInvitation(d, token ? { token } : { phone }, session.d));
+  const found = await findOpenInvitation(token ? { token } : { phone }, session.d);
   // The full type, with its questions, even if an admin has hidden it since the invite was sent.
   const match = found && { ...found, type: await findVisitorType(found.visit.visitorType) };
   return NextResponse.json({

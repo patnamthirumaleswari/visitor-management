@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { todayAtLocation } from "@/lib/dates";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { read } from "@/lib/db";
+import { findVisitsWithPeople } from "@/lib/repos/visits";
 import { typeDisplay } from "@/lib/visitorTypes";
 import { listVisitorTypes } from "@/lib/services/visitorTypes";
-import type { VisitorType } from "@/lib/db";
+import type { VisitorType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,22 +16,16 @@ export async function GET() {
   const types = await listVisitorTypes();
 
   const today = todayAtLocation();
-  const expected = read((d) =>
-    d.visits
-      .filter((v) => v.status === "expected" && v.expectedDate === today)
-      .map((v) => {
-        const visitor = d.visitors.find((p) => p.id === v.visitorId);
-        return {
-          id: v.id,
-          name: visitor?.name ?? "",
-          company: visitor?.company ?? "",
-          phone: visitor?.phone ?? "",
-          host: d.hosts.find((h) => h.id === v.hostId)?.name ?? "",
-          visitorType: v.visitorType,
-          ...typeDisplayFields(types, v.visitorType),
-        };
-      }),
-  );
+  const due = await findVisitsWithPeople({ status: "expected", expectedDate: today }, { checkedInAt: "asc" });
+  const expected = due.map(({ visit: v, visitor, host }) => ({
+    id: v.id,
+    name: visitor.name,
+    company: visitor.company,
+    phone: visitor.phone,
+    host: host.name,
+    visitorType: v.visitorType,
+    ...typeDisplayFields(types, v.visitorType),
+  }));
   return NextResponse.json({ expected });
 }
 

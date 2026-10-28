@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ACCESS, ROLE_LABELS, requireStaffApi } from "@/lib/auth";
-import { normalizePhone } from "@/lib/db";
+import { normalizePhone } from "@/lib/types";
 import { audit } from "@/lib/services/audit";
 import { addPerson, listPeople } from "@/lib/services/people";
 

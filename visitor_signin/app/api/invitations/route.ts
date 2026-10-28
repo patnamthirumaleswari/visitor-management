@@ -1,15 +1,13 @@
 import QRCode from "qrcode";
-import { audit, auditVisit } from "@/lib/services/audit";
+import { audit } from "@/lib/services/audit";
+import { createInvitation } from "@/lib/services/invitations";
 import { after, NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { publicBaseUrl } from "@/lib/baseUrl";
-import { LOCATION } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
-import { isActiveHost } from "@/lib/services/people";
 import { isMobile, MOBILE_ERROR } from "@/lib/phone";
-import { newId, normalizePhone, write, type Invitation, type Visit, type Visitor } from "@/lib/db";
+import { normalizePhone } from "@/lib/types";
 import { notifyVisitorInvited } from "@/lib/notify";
-import { randomToken } from "@/lib/token";
 import { getActiveVisitorTypes } from "@/lib/services/visitorTypes";
 
 export const dynamic = "force-dynamic";
@@ -55,42 +53,7 @@ export async function POST(req: Request) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate)) return bad("Choose a visit date.");
   if (visitDate < todayAtLocation()) return bad("The visit date can't be in the past.");
 
-  const result = write((d) => {
-    const host = d.hosts.find((h) => h.id === hostId && isActiveHost(h));
-    if (!host) return null;
-
-    let visitor = d.visitors.find((v) => v.phone === phone);
-    if (visitor) {
-      Object.assign(visitor, { name, email: email || visitor.email, company: company || visitor.company });
-    } else {
-      visitor = { id: newId(), name, phone, email, company } satisfies Visitor;
-      d.visitors.push(visitor);
-    }
-
-    const visit: Visit = {
-      id: newId(),
-      visitorId: visitor.id,
-      hostId: host.id,
-      locationId: LOCATION.id,
-      visitorType: type.id,
-      purpose: "",
-      status: "expected",
-      source: "portal",
-      expectedDate: visitDate,
-      badgeToken: randomToken(),
-    };
-    const invitation: Invitation = {
-      id: newId(),
-      visitId: visit.id,
-      qrToken: randomToken(),
-      validFrom: visitDate,
-      validTo: visitDate,
-      createdAt: new Date().toISOString(),
-    };
-    d.visits.push(visit);
-    d.invitations.push(invitation);
-    return { visitor, host, visit, invitation };
-  });
+  const result = await createInvitation({ name, phone, email, company, visitDate, visitorTypeId: type.id, hostId: hostId ?? "" });
 
   if (!result) return bad("Choose the host.");
 

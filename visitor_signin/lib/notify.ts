@@ -1,4 +1,5 @@
-import { newId, read, write, type Host, type Notification, type NotificationChannel, type Visit, type Visitor } from "./db";
+import type { Host, Notification, NotificationChannel, Visit, Visitor } from "./types";
+import { insertNotification } from "./repos/notifications";
 import { escapeHtml, sendEmail, sendSms, type SendResult } from "./channels";
 import { LOCATION } from "./config";
 import { publicBaseUrl } from "./baseUrl";
@@ -253,7 +254,7 @@ export async function notifyVisitorInvited(visitor: Visitor, host: Host, visit: 
   );
 }
 
-/** Sends one message and records the result, including failures, in db.json. Never throws. */
+/** Sends one message and records the result, including failures, in the database. Never throws. */
 async function deliver(
   record: Pick<Notification, "kind" | "visitId" | "hostId" | "channel" | "to">,
   send: () => Promise<SendResult>,
@@ -268,9 +269,9 @@ async function deliver(
     console.error(`[notify] ${record.channel} to ${record.to} failed:`, error);
   }
 
-  write((d) => {
-    d.notifications.push({ id: newId(), ...record, status, ...(error ? { error } : {}), sentAt: new Date().toISOString() });
-  });
+  await insertNotification({ ...record, status, ...(error ? { error } : {}), sentAt: new Date().toISOString() }).catch((e) =>
+    console.error("[notify] could not record the notification", e),
+  );
 }
 
 function emailLayout(company: string, body: string) {

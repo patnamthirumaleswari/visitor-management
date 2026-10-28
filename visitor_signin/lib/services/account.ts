@@ -1,4 +1,4 @@
-import type { NotificationChannel } from "../db";
+import type { NotificationChannel } from "../types";
 import { hashPassword } from "../password";
 import { updateHost } from "../repos/hosts";
 import { randomToken } from "../token";

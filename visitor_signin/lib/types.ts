@@ -1,10 +1,5 @@
-// Prototype storage: one JSON file under ./data. Every function goes through read()/write(),
-// so swapping this module for PostgreSQL (Prisma/Drizzle) later doesn't touch the routes.
-import fs from "node:fs";
-import path from "node:path";
-import crypto from "node:crypto";
-import { STARTING_VISITOR_TYPES } from "./config";
-import { hashPassword } from "./password";
+// The app's data types, shared by pages, services and repos. They're stored in Supabase (PostgreSQL,
+// see prisma/schema.prisma); lib/repos/* convert between these and the database rows.
 
 export type NotificationChannel = "email" | "sms";
 
@@ -188,116 +183,6 @@ export type SafetyBriefing = {
   exitPlan: string | null; // picture of the exit plan (data URL, prototype); file storage in production
   updatedAt: string;
 };
-
-export type Data = {
-  counters?: { visitNo: number }; // last visitor number handed out
-  watchlist?: WatchEntry[];
-  safety?: SafetyBriefing; // missing until an admin saves one: the starting briefing in lib/safety.ts applies
-  visitorTypes: VisitorType[];
-  branding?: Branding;
-  staff: StaffUser[];
-  hosts: Host[];
-  visitors: Visitor[];
-  visits: Visit[];
-  invitations: Invitation[];
-  usedSessions: string[];
-  notifications: Notification[];
-  employeeVisits: EmployeeVisit[];
-};
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_FILE = path.join(DATA_DIR, "db.json");
-
-// Starting accounts, taken from the staff login in the old Vite client (client/src/login/users.js).
-// Change these passwords before anyone else can reach the app.
-const SEED_STAFF: Array<Omit<StaffUser, "id" | "passwordHash"> & { password: string }> = [
-  { username: "admin", password: "admin123", name: "Admin User", role: "admin" },
-  { username: "reception", password: "reception123", name: "Front Desk", role: "receptionist" },
-  { username: "host", password: "host123", name: "Priya Nair", role: "host", hostId: "h3" },
-  { username: "security", password: "security123", name: "Security Officer", role: "security" },
-];
-
-function seedStaff(): StaffUser[] {
-  return SEED_STAFF.map(({ password, ...user }) => ({ id: newId(), ...user, passwordHash: hashPassword(password) }));
-}
-
-// Every employee starts with this PIN so the reception sign-in can be tried straight away.
-// Each employee changes it on /account.
-const STARTING_PIN = "1234";
-
-const SEED: Omit<Data, "staff" | "visitorTypes"> = {
-  hosts: [
-    { id: "h1", name: "Anita Sharma", email: "anita@example.com", phone: "+911111111111", department: "Engineering" },
-    { id: "h2", name: "Rahul Verma", email: "rahul@example.com", phone: "+912222222222", department: "Sales" },
-    { id: "h3", name: "Priya Nair", email: "priya@example.com", phone: "+913333333333", department: "HR" },
-    { id: "h4", name: "Arjun Reddy", email: "arjun@example.com", phone: "+914444444444", department: "Finance" },
-    { id: "h5", name: "Meera Iyer", email: "meera@example.com", phone: "+915555555555", department: "Operations" },
-    { id: "h6", name: "Kiran Kumar", email: "kiran@example.com", phone: "+916666666666", department: "Facilities" },
-  ],
-  visitors: [],
-  visits: [],
-  invitations: [],
-  usedSessions: [],
-  notifications: [],
-  employeeVisits: [],
-};
-
-function load(): Data {
-  if (!fs.existsSync(DB_FILE)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DB_FILE, JSON.stringify({ staff: seedStaff(), ...SEED }, null, 2));
-  }
-  const data = JSON.parse(fs.readFileSync(DB_FILE, "utf8")) as Data;
-  data.invitations ??= []; // db.json files created before pre-registration existed
-  if (!data.staff) {
-    // db.json files created before staff login existed: add the starting accounts once.
-    data.staff = seedStaff();
-    save(data);
-  }
-  data.employeeVisits ??= []; // db.json files created before employee sign-in existed
-  if (!data.visitorTypes) {
-    // db.json files created before visitor types were editable: copy in the starting set, once.
-    data.visitorTypes = STARTING_VISITOR_TYPES.map((t) => ({
-      ...t,
-      fields: { ...t.fields },
-      questions: t.questions.map((q) => ({ ...q, ...(q.options ? { options: [...q.options] } : {}) })),
-      active: true,
-    }));
-    save(data);
-  }
-  const delivery = data.visitorTypes.find((t) => t.id === "delivery");
-  if (delivery && delivery.approvalRequired === undefined) {
-    // Saved before host approval existed: couriers keep going straight in, as the starting set intends.
-    delivery.approvalRequired = false;
-    save(data);
-  }
-  if (data.hosts.some((h) => !h.pinHash || !h.qrToken)) {
-    // Give employees from older db.json files a starting PIN and a personal QR, once.
-    for (const host of data.hosts) {
-      host.pinHash ??= hashPassword(STARTING_PIN);
-      host.qrToken ??= crypto.randomBytes(18).toString("base64url");
-    }
-    save(data);
-  }
-  return data;
-}
-
-function save(data: Data) {
-  const tmp = `${DB_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
-  fs.renameSync(tmp, DB_FILE);
-}
-
-export function read<T>(fn: (data: Data) => T): T {
-  return fn(load());
-}
-
-export function write<T>(fn: (data: Data) => T): T {
-  const data = load();
-  const result = fn(data);
-  save(data);
-  return result;
-}
 
 export const newId = () => crypto.randomUUID();
 

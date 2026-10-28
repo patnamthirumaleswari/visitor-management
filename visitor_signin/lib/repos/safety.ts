@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type { SafetyBriefing, SafetyRule } from "../db";
+import type { SafetyBriefing, SafetyRule } from "../types";
 import { prisma } from "../prisma";
 
 // The single SafetyBriefing row (id "main"). Missing until an admin saves one.

@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { Host, StaffRole } from "../db";
+import type { Host, StaffRole } from "../types";
 import { hashPassword } from "../password";
 import { isMobile, MOBILE_ERROR } from "../phone";
 import { createHost, findHostById, listHosts, updateHost } from "../repos/hosts";

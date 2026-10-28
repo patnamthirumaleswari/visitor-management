@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Icon from "../../../Icon";
 import SafetyBriefingView from "../../../SafetyBriefingView";
-import { read } from "@/lib/db";
+import { countVisits } from "@/lib/repos/visits";
 import { getBriefing } from "@/lib/services/safety";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export default async function VisitorSafetyPage({
 }) {
   const { id } = await params;
   const { t } = await searchParams;
-  const ok = !!t && read((d) => d.visits.some((v) => v.id === id && v.badgeToken === t));
+  const ok = !!t && (await countVisits({ id, badgeToken: t })) > 0;
   if (!ok) notFound();
 
   return (

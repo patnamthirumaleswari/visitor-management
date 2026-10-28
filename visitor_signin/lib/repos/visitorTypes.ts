@@ -1,5 +1,5 @@
 import type { Prisma, VisitorType as TypeRow } from "@prisma/client";
-import type { Question, StandardField, FieldMode, VisitorType } from "../db";
+import type { Question, StandardField, FieldMode, VisitorType } from "../types";
 import { prisma } from "../prisma";
 
 // Visitor types (table VisitorType), kept in the order admins added them.

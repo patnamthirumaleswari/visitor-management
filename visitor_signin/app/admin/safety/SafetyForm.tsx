@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Icon from "../../Icon";
 import SafetyBriefingView from "../../SafetyBriefingView";
-import type { SafetyBriefing, SafetyRule } from "@/lib/db";
+import type { SafetyBriefing, SafetyRule } from "@/lib/types";
 import { RULE_KINDS } from "@/lib/safetyRules";
 
 const MAX_PLAN_PX = 1200; // exit-plan pictures are shrunk in the browser before upload

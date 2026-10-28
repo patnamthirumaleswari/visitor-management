@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX } from "@/lib/config";
-import { write } from "@/lib/db";
-import { checkPin, toggleEmployee, type EmployeeResult } from "@/lib/employees";
-import { isActiveHost } from "@/lib/services/people";
+import { toggleByPin, toggleByQr } from "@/lib/services/employees";
 
 export const dynamic = "force-dynamic";
 
@@ -23,21 +21,11 @@ export async function POST(req: Request) {
   // Close yesterday's visit first if they forgot to sign out, so this tap signs them in, not out.
   await sweepAutoSignOut();
 
-  const result: EmployeeResult = write((d) => {
-    if (typeof body.qr === "string") {
-      const token = body.qr.startsWith(EMPLOYEE_QR_PREFIX) ? body.qr.slice(EMPLOYEE_QR_PREFIX.length) : "";
-      const host = token ? d.hosts.find((h) => h.qrToken === token && isActiveHost(h)) : undefined;
-      if (!host) return { ok: false, error: "This isn't a valid employee QR code. Use your name and PIN instead.", status: 404 };
-      return toggleEmployee(d, host, "qr");
-    }
-
-    const host = typeof body.hostId === "string" ? d.hosts.find((h) => h.id === body.hostId && isActiveHost(h)) : undefined;
-    if (!host) return { ok: false, error: "Choose your name first.", status: 400 };
-    const pin = typeof body.pin === "string" ? body.pin : "";
-    const problem = checkPin(host, pin);
-    if (problem) return { ok: false, error: problem, status: 401 };
-    return toggleEmployee(d, host, "pin");
-  });
+  const result = typeof body.qr === "string"
+    ? await toggleByQr(body.qr.startsWith(EMPLOYEE_QR_PREFIX) ? body.qr.slice(EMPLOYEE_QR_PREFIX.length) : "")
+    : typeof body.hostId === "string"
+      ? await toggleByPin(body.hostId, typeof body.pin === "string" ? body.pin : "")
+      : ({ ok: false, error: "Choose your name first.", status: 400 } as const);
 
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
   return NextResponse.json({ action: result.action, firstName: result.firstName, at: result.at });

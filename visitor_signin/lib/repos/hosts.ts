@@ -1,5 +1,5 @@
 import type { Host as HostRow } from "@prisma/client";
-import type { Host, NotificationChannel } from "../db";
+import type { Host, NotificationChannel } from "../types";
 import { prisma } from "../prisma";
 
 // Employees visitors can come to see (table Host). Returns the app's Host shape.
@@ -20,6 +20,11 @@ export const toHost = (h: HostRow): Host => ({
 
 export async function findHostById(id: string): Promise<Host | null> {
   const h = await prisma.host.findUnique({ where: { id } });
+  return h && toHost(h);
+}
+
+export async function findHostByQrToken(qrToken: string): Promise<Host | null> {
+  const h = await prisma.host.findUnique({ where: { qrToken } });
   return h && toHost(h);
 }
 

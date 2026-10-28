@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { mobileInput } from "@/lib/phone";
 import Icon from "../../Icon";
-import type { WatchEntry } from "@/lib/db";
+import type { WatchEntry } from "@/lib/types";
 import { LOCATION } from "@/lib/config";
 
 const EMPTY = { name: "", phone: "", company: "", reason: "" };

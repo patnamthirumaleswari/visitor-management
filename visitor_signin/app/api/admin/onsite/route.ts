@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { isOnSite } from "@/lib/approvals";
+import { ON_SITE } from "@/lib/approvals";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { sweepOldRecords } from "@/lib/retention";
-import { read } from "@/lib/db";
+import { listOpenEmployeeVisits } from "@/lib/repos/employeeVisits";
+import { channelsForVisits } from "@/lib/repos/notifications";
+import { findVisitsWithPeople } from "@/lib/repos/visits";
 import { typeDisplay } from "@/lib/visitorTypes";
 import { listVisitorTypes } from "@/lib/services/visitorTypes";
-import type { VisitorType } from "@/lib/db";
+import type { VisitorType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -19,70 +21,46 @@ export async function GET() {
   await sweepAutoSignOut(); // so nobody past the end-of-day cut-off shows as on site
   await sweepOldRecords(); // at most once an hour: delete records past the retention time
 
-  const onsite = read((d) =>
-    d.visits
-      .filter(isOnSite) // inside: on site, checking out, or at the gate
-      .sort((a, b) => (b.signedInAt ?? "").localeCompare(a.signedInAt ?? ""))
-      .map((v) => {
-        const visitor = d.visitors.find((p) => p.id === v.visitorId);
-        const host = d.hosts.find((h) => h.id === v.hostId);
-        return {
-          id: v.id,
-          no: v.no,
-          status: v.status,
-          name: visitor?.name ?? "",
-          company: visitor?.company ?? "",
-          phone: visitor?.phone ?? "",
-          photo: visitor?.photo ?? null,
-          host: host?.name ?? "",
-          visitorType: v.visitorType,
-          ...typeDisplayFields(types, v.visitorType),
-          answers: v.answers ?? [], // the visitor type's questions (FR-KIO-05)
-          source: v.source,
-          signedInAt: v.signedInAt,
-          // How the host was told (FR-NOT-01); records from before invitations count as arrivals.
-          notified: d.notifications
-            .filter((n) => n.visitId === v.id && ["arrival", "approval"].includes(n.kind ?? "arrival"))
-            .map(({ channel, status }) => ({ channel, status })),
-        };
-      }),
-  );
+  const inside = await findVisitsWithPeople({ status: { in: ON_SITE } }, { signedInAt: "desc" }); // on site, checking out, or at the gate
+  // How the host was told (FR-NOT-01).
+  const told = await channelsForVisits(inside.map((i) => i.visit.id), ["arrival", "approval"]);
+  const onsite = inside.map(({ visit: v, visitor, host }) => ({
+    id: v.id,
+    no: v.no,
+    status: v.status,
+    name: visitor.name,
+    company: visitor.company,
+    phone: visitor.phone,
+    photo: visitor.photo ?? null,
+    host: host.name,
+    visitorType: v.visitorType,
+    ...typeDisplayFields(types, v.visitorType),
+    answers: v.answers ?? [], // the visitor type's questions (FR-KIO-05)
+    source: v.source,
+    signedInAt: v.signedInAt,
+    notified: told[v.id] ?? [],
+  }));
 
   // Employees who signed in at reception and haven't signed out (FR-EMP-01). They are on
   // the evacuation list too.
-  const employees = read((d) =>
-    d.employeeVisits
-      .filter((v) => !v.signedOutAt)
-      .sort((a, b) => b.signedInAt.localeCompare(a.signedInAt))
-      .map((v) => {
-        const employee = d.hosts.find((h) => h.id === v.hostId);
-        return {
-          id: v.id,
-          name: employee?.name ?? "",
-          department: employee?.department ?? "",
-          phone: employee?.phone ?? "",
-          method: v.method,
-          signedInAt: v.signedInAt,
-        };
-      }),
-  );
+  const employees = (await listOpenEmployeeVisits()).map(({ visit: v, host }) => ({
+    id: v.id,
+    name: host.name,
+    department: host.department,
+    phone: host.phone,
+    method: v.method,
+    signedInAt: v.signedInAt,
+  }));
 
   // Visitors waiting at reception for approval are inside the building too (evacuation list).
-  const waiting = read((d) =>
-    d.visits
-      .filter((v) => v.status === "pending" || v.status === "review")
-      .map((v) => {
-        const visitor = d.visitors.find((p) => p.id === v.visitorId);
-        return {
-          id: v.id,
-          name: visitor?.name ?? "",
-          company: visitor?.company ?? "",
-          phone: visitor?.phone ?? "",
-          host: d.hosts.find((h) => h.id === v.hostId)?.name ?? "",
-          checkedInAt: v.checkedInAt,
-        };
-      }),
-  );
+  const waiting = (await findVisitsWithPeople({ status: { in: ["pending", "review"] } }, { checkedInAt: "asc" })).map(({ visit: v, visitor, host }) => ({
+    id: v.id,
+    name: visitor.name,
+    company: visitor.company,
+    phone: visitor.phone,
+    host: host.name,
+    checkedInAt: v.checkedInAt,
+  }));
 
   return NextResponse.json({ onsite, employees, waiting });
 }

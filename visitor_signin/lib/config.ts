@@ -1,6 +1,5 @@
 // Prototype configuration. In the full product these come from the Location and
 // VisitorType tables managed in the admin portal (FR-LOC-02, FR-KIO-04/05).
-import type { VisitorType } from "./db";
 
 export const LOCATION = {
   id: "hq",
@@ -10,38 +9,6 @@ export const LOCATION = {
   address: "4th Floor, Example Tech Park, Hitech City, Hyderabad 500081", // shown in invitations (FR-PRE-02)
   welcomeText: "Welcome! Scan to check in on your phone",
 };
-
-// Visitor types now live in data/db.json and are managed on /admin/visitor-types (FR-KIO-04/05/07).
-// These are only the starting set, copied into db.json the first time the app runs.
-// The types named in the requirements (FR-KIO-04): Guest, Contractor, Interview, Delivery.
-export const STARTING_VISITOR_TYPES: Omit<VisitorType, "active">[] = [
-  {
-    id: "guest", label: "Guest", description: "Meeting someone", color: "#2563eb", photoRequired: true, agreementRequired: true,
-    fields: { company: "optional", email: "optional", purpose: "optional" },
-    questions: [],
-  },
-  {
-    id: "contractor", label: "Contractor", description: "Here to do work on site", color: "#d97706", photoRequired: true, agreementRequired: true,
-    fields: { company: "required", email: "optional", purpose: "hidden" },
-    questions: [
-      { id: "q-work", label: "What work are you doing today?", kind: "text", required: true },
-      { id: "q-induction", label: "Have you completed our site safety induction?", kind: "yesno", required: true },
-    ],
-  },
-  {
-    id: "interview", label: "Interview", description: "Here for a job interview", color: "#7c3aed", photoRequired: false, agreementRequired: true,
-    fields: { company: "hidden", email: "optional", purpose: "hidden" },
-    questions: [{ id: "q-role", label: "Which role are you interviewing for?", kind: "text", required: false }],
-  },
-  {
-    id: "delivery", label: "Delivery", description: "Dropping off a parcel or food", color: "#059669", photoRequired: false, agreementRequired: false,
-    fields: { company: "required", email: "hidden", purpose: "hidden" },
-    approvalRequired: false, // couriers drop off at reception; no need to wait for a host
-    questions: [
-      { id: "q-parcel", label: "What are you delivering?", kind: "select", required: true, options: ["Parcel", "Documents", "Food", "Other"] },
-    ],
-  },
-];
 
 export const AGREEMENT = {
   version: "2026-10",

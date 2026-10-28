@@ -4,7 +4,7 @@ import Logo from "../../Logo";
 import { minutesSince } from "@/lib/approvals";
 import { getBranding } from "@/lib/services/branding";
 import { LOCATION } from "@/lib/config";
-import { read } from "@/lib/db";
+import { findVisitWithPeople } from "@/lib/repos/visits";
 import { readToken } from "@/lib/token";
 import { typeDisplay } from "@/lib/visitorTypes";
 import { listVisitorTypes } from "@/lib/services/visitorTypes";
@@ -20,16 +20,9 @@ export default async function ApprovePage({ params }: { params: Promise<{ token:
   const [visitId, hostId] = payload?.d.split(":") ?? [];
 
   const data = payload
-    ? read((d) => {
-        const visit = d.visits.find((v) => v.id === visitId && v.hostId === hostId);
-        if (!visit) return null;
-        return {
-          visit,
-          visitor: d.visitors.find((p) => p.id === visit.visitorId),
-          host: d.hosts.find((h) => h.id === hostId),
-          type: typeDisplay(types, visit.visitorType),
-        };
-      })
+    ? await findVisitWithPeople(visitId).then((found) =>
+        found && found.visit.hostId === hostId ? { ...found, type: typeDisplay(types, found.visit.visitorType) } : null,
+      )
     : null;
 
   return (

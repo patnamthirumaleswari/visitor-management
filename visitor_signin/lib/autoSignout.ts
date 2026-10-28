@@ -1,5 +1,7 @@
 import { LOCATION } from "./config";
-import { read, write, type EmployeeVisit, type Visit } from "./db";
+import type { EmployeeVisit, Visit } from "./types";
+import { listOpenEmployeeVisits, signOutEmployeeVisit } from "./repos/employeeVisits";
+import { changeVisit, findVisits, OPEN_STATUSES } from "./repos/visits";
 import { getSettings } from "./services/settings";
 
 // Automatic end-of-day sign-out (FR-KIO-10). Anyone still signed in when the sign-out time (Settings) passes,
@@ -57,27 +59,23 @@ export async function sweepAutoSignOut(): Promise<number> {
   const now = Date.now();
   const time = (await getSettings()).autoSignoutTime;
   if (!time) return 0;
-  // Look first without writing, so the frequent calls don't rewrite the file every time.
-  if (!read((d) => d.visits.some((v) => isDue(v, now, time)) || d.employeeVisits.some((v) => isEmployeeDue(v, now, time)))) return 0;
+  let count = 0;
 
-  return write((d) => {
-    let count = 0;
-    for (const visit of d.visits) {
-      if (!isDue(visit, now, time)) continue;
-      const start = startOf(visit)!; // read before the status changes: it decides which time is used
-      visit.status = "signed_out";
-      visit.signedOutAt = autoSignOutTime(start, time)!.toISOString();
-      visit.signedOutBy = "auto";
-      count++;
-    }
-    for (const visit of d.employeeVisits) {
-      if (!isEmployeeDue(visit, now, time)) continue;
-      visit.signedOutAt = autoSignOutTime(visit.signedInAt, time)!.toISOString();
-      visit.signedOutBy = "auto";
-      count++;
-    }
-    return count;
-  });
+  for (const visit of (await findVisits({ status: { in: OPEN_STATUSES } })).filter((v) => isDue(v, now, time))) {
+    const done = await changeVisit(visit.id, (v) => {
+      if (!isDue(v, now, time)) return false; // changed in the meantime
+      const start = startOf(v)!; // read before the status changes: it decides which time is used
+      v.status = "signed_out";
+      v.signedOutAt = autoSignOutTime(start, time)!.toISOString();
+      v.signedOutBy = "auto";
+      return true;
+    });
+    if (done) count++;
+  }
+  for (const { visit } of (await listOpenEmployeeVisits()).filter(({ visit }) => isEmployeeDue(visit, now, time))) {
+    if (await signOutEmployeeVisit(visit.id, autoSignOutTime(visit.signedInAt, time)!, "auto")) count++;
+  }
+  return count;
 }
 
 /** Minutes the location's time zone is ahead of UTC at that moment, e.g. 330 for India. */

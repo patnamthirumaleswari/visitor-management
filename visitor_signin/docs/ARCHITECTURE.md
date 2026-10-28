@@ -24,7 +24,8 @@ Supabase PostgreSQL  Tables defined in prisma/schema.prisma.
 
 Rules that keep the layers clean:
 
-1. A page or route never imports `lib/repos` or Prisma; it calls a service.
+1. A page or route never uses Prisma directly. Anything with a rule goes through a service; a plain read
+   with no rule (a list, a count) may call a repo.
 2. A service never reads `Request`, cookies or headers; the route passes in plain values (who is
    signed in, what they sent).
 3. A repo never decides anything (no "can this host approve?"); it only reads and writes rows.
@@ -50,12 +51,12 @@ different people at the same time once the shared foundation (module 0) is in pl
 Order: module 0 first; then 1 and 2 (others depend on staff, hosts and visitor types); then 3; then
 4, 5, 6 and 7 can go in parallel.
 
-## Moving from db.json
+## Moving from db.json (done)
 
 1. Create the tables: `npx prisma migrate dev` (from `prisma/schema.prisma`).
 2. Copy the existing `data/db.json` into Supabase: `node scripts/import-json.mjs` (`--replace` to redo it).
-3. Convert the modules in the order above. Until all are converted the branch doesn't run end to end.
-4. Run the end-to-end test scripts against the converted app, then delete `data/db.json` handling.
+3. All modules now use Supabase; the JSON store (`lib/db.ts`) is gone. The shared types are in `lib/types.ts`.
+4. A new database gets its starting data from `npx prisma db seed` (`scripts/seed.mjs`).
 
 ## Hosting on Cloudflare (after the move)
 

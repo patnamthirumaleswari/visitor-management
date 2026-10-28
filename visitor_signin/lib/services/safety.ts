@@ -1,4 +1,4 @@
-import type { SafetyBriefing } from "../db";
+import type { SafetyBriefing } from "../types";
 import { getSafetyRow, saveSafetyRow } from "../repos/safety";
 import { startingBriefing } from "../safety";
 

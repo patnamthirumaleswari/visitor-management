@@ -1,6 +1,6 @@
 import StaffShell from "../../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
-import { read } from "@/lib/db";
+import { listWatchEntries } from "@/lib/repos/watchlist";
 import WatchlistManager from "./WatchlistManager";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export default async function WatchlistPage() {
   const staff = await requireStaffPage(ACCESS.watchlist, "/admin/watchlist");
   return (
     <StaffShell staff={staff}>
-      <WatchlistManager initial={read((d) => d.watchlist ?? [])} />
+      <WatchlistManager initial={await listWatchEntries()} />
     </StaffShell>
   );
 }

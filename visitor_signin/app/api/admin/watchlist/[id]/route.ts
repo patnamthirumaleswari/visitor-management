@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { write } from "@/lib/db";
+import { deleteWatchEntry, setWatchEntryActive } from "@/lib/repos/watchlist";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof body?.active !== "boolean") return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   const active = body.active;
 
-  const entry = write((d) => {
-    const e = (d.watchlist ?? []).find((w) => w.id === id);
-    if (e) e.active = active;
-    return e;
-  });
+  const entry = await setWatchEntryActive(id, active);
   if (!entry) return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   await audit(req, staff, active ? "Watchlist entry resumed" : "Watchlist entry paused", entry.name || entry.phone);
   return NextResponse.json({ entry });
@@ -30,10 +26,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   if (staff instanceof NextResponse) return staff;
   const { id } = await params;
 
-  const removed = write((d) => {
-    const i = (d.watchlist ?? []).findIndex((w) => w.id === id);
-    return i < 0 ? null : d.watchlist!.splice(i, 1)[0];
-  });
+  const removed = await deleteWatchEntry(id);
   if (!removed) return NextResponse.json({ error: "Entry not found" }, { status: 404 });
   await audit(req, staff, "Watchlist entry removed", removed.name || removed.phone);
   return NextResponse.json({ ok: true });

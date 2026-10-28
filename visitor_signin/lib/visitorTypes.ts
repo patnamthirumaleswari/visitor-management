@@ -6,7 +6,7 @@ import type {
   QuestionKind,
   StandardField,
   VisitorType,
-} from "./db";
+} from "./types";
 
 // Visitor types and their questions (FR-KIO-04/05/07): the rules for a type's fields and questions.
 // Loading and saving them is in lib/services/visitorTypes.ts.

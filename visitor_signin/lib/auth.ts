@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
-import type { StaffRole, StaffUser } from "./db";
+import type { StaffRole, StaffUser } from "./types";
 import { findStaffById } from "./repos/staff";
 import { readToken } from "./token";
 

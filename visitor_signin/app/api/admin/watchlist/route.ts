@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { newId, normalizePhone, read, write, type WatchEntry } from "@/lib/db";
+import { normalizePhone } from "@/lib/types";
+import { insertWatchEntry, listWatchEntries } from "@/lib/repos/watchlist";
 import { isMobile, MOBILE_ERROR } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice
 export async function GET() {
   const staff = await requireStaffApi(ACCESS.watchlist);
   if (staff instanceof NextResponse) return staff;
-  return NextResponse.json({ entries: read((d) => d.watchlist ?? []) });
+  return NextResponse.json({ entries: await listWatchEntries() });
 }
 
 export async function POST(req: Request) {
@@ -28,10 +29,7 @@ export async function POST(req: Request) {
   if (phone && !isMobile(normalizePhone(phone))) return bad(MOBILE_ERROR);
   if (reason.length < 3) return bad("Say why they're on the watchlist (admins see this at check-in).");
 
-  const entry: WatchEntry = { id: newId(), name, phone, company, reason, active: true, by: staff.name, at: new Date().toISOString() };
-  write((d) => {
-    (d.watchlist ??= []).unshift(entry);
-  });
+  const entry = await insertWatchEntry({ name, phone, company, reason, by: staff.name });
   await audit(req, staff, "Watchlist entry added", `${name || phone}: ${reason}`);
   return NextResponse.json({ entry });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import type { SafetyRule } from "@/lib/db";
+import type { SafetyRule } from "@/lib/types";
 import { RULE_KINDS } from "@/lib/safety";
 import { saveBriefing } from "@/lib/services/safety";
 

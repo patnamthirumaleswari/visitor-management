@@ -1,5 +1,5 @@
 import { LOCATION } from "./config";
-import type { Branding } from "./db";
+import type { Branding } from "./types";
 
 // Company branding: logo, main colour, company name and the reception welcome text
 // (FR-KIO-03, FR-BAD-02, FR-ADM-06). Admins change it on /admin/branding; until then these defaults apply.

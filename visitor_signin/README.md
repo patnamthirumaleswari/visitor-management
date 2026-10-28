@@ -75,7 +75,7 @@ reception can recognise the visitor.
 - Email uses SendGrid and SMS uses Twilio, called with `fetch` (`lib/channels.ts`), so no extra package is needed.
   Put the keys in `.env.local` (see `.env.example`). **Without keys, messages are printed in the terminal
   running `npm run dev`** and recorded as "logged only".
-- Every attempt is saved in `notifications` in `data/db.json` with its status: sent, logged or failed (with the error).
+- Every attempt is saved in the `Notification` table with its status: sent, logged or failed (with the error).
   `/admin` shows it under the host's name, for example "Email sent · SMS failed".
 
 ## Employee sign-in at reception (FR-EMP-01)
@@ -99,7 +99,7 @@ Reception screen (/kiosk)  ->  "Employee? Sign in or out here"  ->  /kiosk/staff
 ## Staff login (NFR-SEC-02/03)
 
 Based on the staff login from the Vite client (`client/src/login/`), moved to the server:
-passwords are stored as scrypt hashes in `data/db.json` and checked in `/api/auth/login`, which sets an
+passwords are stored as scrypt hashes in the database and checked in `/api/auth/login`, which sets an
 httpOnly cookie valid for 8 hours. Every staff page and API checks the role again on each request
 (`lib/auth.ts`, `ACCESS`).
 
@@ -110,7 +110,7 @@ httpOnly cookie valid for 8 hours. Every staff page and API checks the role agai
 | `host` | `host123` | Host (Priya Nair) | `/pre-register` | pre-register, only for themselves |
 | `security` | `security123` | Security | `/security` | evacuation list |
 
-These starting accounts are added to `data/db.json` the first time the app runs. Change them before
+These starting accounts are created by `npx prisma db seed` on a new database. Change them before
 anyone else can reach the app.
 
 After 5 wrong passwords for one username from one address, that pair waits 15 minutes (`lib/loginLimit.ts`).
@@ -119,7 +119,7 @@ sign-in (`/account/password`).
 
 ## Signing out (FR-KIO-10)
 
-A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records which one was used.
+A visitor can sign out in four ways. The visit's `signedOutBy` records which one was used.
 
 | How | Where | `signedOutBy` |
 |---|---|---|
@@ -140,7 +140,7 @@ A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records whi
 - **`/admin/branding`** (admins only): company name, welcome text, main colour and logo, with a live preview.
   The logo is shrunk to 400 px in the browser and saved as PNG; PNG, JPG and WebP are accepted, SVG isn't
   (it can contain scripts). Without a logo, the company initials are shown in the main colour.
-- The settings are stored as `branding` in `data/db.json` (`lib/branding.ts` has the defaults) and used by:
+- The settings are stored in the `Branding` table (`lib/branding.ts` has the defaults) and used by:
   the reception screen (logo + welcome text), the employee and sign-out screens, the badge, the invitation
   page, invitation emails, and the colour of buttons and links on every page. Button text switches between
   white and dark automatically so it stays readable on any colour.
@@ -153,7 +153,7 @@ A visitor can sign out in four ways. `signedOutBy` in `data/db.json` records whi
 
 ## Visitor types (FR-KIO-04/05/07)
 
-Admins manage them on **`/admin/visitor-types`**. They're stored as `visitorTypes` in `data/db.json`;
+Admins manage them on **`/admin/visitor-types`**. They're stored in the `VisitorType` table;
 the first time the app runs it copies in Guest, Contractor, Interview and Delivery (`lib/config.ts`).
 
 For each type an admin chooses:
@@ -251,7 +251,7 @@ On site -> visitor taps "Check out" (phone, or "Signing out?" at reception)
   the menu. Opening one marks it read and shows the visitor. Built from the notification records (`lib/inbox.ts`).
 - **Settings** (`/admin/settings`, admins): when to tell reception about unanswered requests (default 5 min), the
   automatic sign-out time (default 8 pm, or off), and **how long visit records are kept** (default 90 days, matching
-  the visitor agreement). Saved in `db.json`; defaults in `lib/config.ts`, read through `lib/settings.ts`.
+  the visitor agreement). Saved in the `Settings` table; defaults in `lib/config.ts`, read through `lib/services/settings.ts`.
 - **Old records** are deleted once an hour while the reception screen or admin home is open: finished visits older
   than the retention time, with their invitations and notifications, and visitors with no visits left (their photo
   too). Logged in the audit log. See `lib/retention.ts`.
@@ -273,13 +273,21 @@ violet background, Plus Jakarta Sans and JetBrains Mono fonts, and line icons.
 
 ## Run it
 
-Needs Node.js 20 or newer. Run these from the `visitor_signin` folder.
+Needs Node.js 20 or newer and a Supabase project (PostgreSQL). Run these from the `visitor_signin` folder.
 
 ```bash
 cd visitor_signin
 npm install
-npm run dev
 ```
+
+1. Copy the database links from Supabase (Connect, ORMs tab, Prisma) into `.env`: `DATABASE_URL` (port 6543,
+   `?pgbouncer=true`) and `DIRECT_URL` (port 5432). See `.env.example`.
+2. Create the tables: `npx prisma migrate deploy`.
+3. Starting data, on a new database: `npx prisma db seed`. Or copy an old `data/db.json` across instead:
+   `npm run db:import` (add `-- --replace` to empty the tables first).
+4. `npm run dev`
+
+The backend is layered (routes, then `lib/services`, then `lib/repos` with Prisma); see `docs/ARCHITECTURE.md`.
 
 1. On the PC, open `http://localhost:3000/kiosk`.
 2. Under the QR it shows the address phones will use (e.g. `http://192.168.0.111:3000`).
@@ -291,9 +299,8 @@ If the phone can't load the page, allow Node through Windows Firewall on private
 
 ## Prototype shortcuts to replace before production
 
-- `lib/db.ts` stores everything in `data/db.json`. Swap for PostgreSQL (Prisma/Drizzle).
 - Notifications are sent from the web server once, with no retry. Move them to a job queue with retries.
-- Add MFA for staff (NFR-SEC-02). The audit log lives in `db.json`; production needs tamper-proof storage.
+- Add MFA for staff (NFR-SEC-02). The audit log is an ordinary table; production needs tamper-proof storage.
 - The login rate limit is kept in memory; with more than one server, keep it in Redis.
 - Photos and signatures are stored as data URLs. Move to S3 with encryption at rest (NFR-SEC-01).
 - Set a strong `APP_SECRET` and serve over HTTPS.

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isMobile } from "@/lib/phone";
-import { isOpen } from "@/lib/approvals";
-import { normalizePhone, read } from "@/lib/db";
+import { normalizePhone } from "@/lib/types";
+import { findVisitsWithPeople, OPEN_STATUSES } from "@/lib/repos/visits";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +27,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Enter your 4-digit visit code and your mobile number." }, { status: 400 });
   }
 
-  const visit = read((d) => {
-    const v = d.visits.find((x) => x.code === code && isOpen(x));
-    const visitor = v && d.visitors.find((p) => p.id === v.visitorId);
-    return v && visitor && visitor.phone === phone ? v : null;
-  });
+  const visit = (await findVisitsWithPeople({ code, status: { in: OPEN_STATUSES }, visitor: { phone } }, undefined, 1))[0]?.visit ?? null;
 
   if (!visit) {
     const entry = f && now - f.since < WINDOW_MS ? f : { count: 0, since: now };

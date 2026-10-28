@@ -1,4 +1,4 @@
-import type { StaffUser } from "../db";
+import type { StaffUser } from "../types";
 import { hashPassword, verifyPassword } from "../password";
 import { clearAttempt, getAttempt, saveAttempt } from "../repos/loginAttempts";
 import { findStaffById, findStaffByUsername, updateStaff } from "../repos/staff";

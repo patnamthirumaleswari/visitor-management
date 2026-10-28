@@ -1,7 +1,7 @@
 import QRCode from "qrcode";
 import { NextResponse } from "next/server";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
-import { checkEscalations } from "@/lib/requests";
+import { checkEscalations } from "@/lib/services/requests";
 import { sweepOldRecords } from "@/lib/retention";
 import { publicBaseUrl } from "@/lib/baseUrl";
 import { LOCATION, QR_ROTATE_SECONDS, QR_TTL_SECONDS } from "@/lib/config";

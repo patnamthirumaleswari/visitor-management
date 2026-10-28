@@ -1,4 +1,4 @@
-import type { Branding } from "../db";
+import type { Branding } from "../types";
 import { prisma } from "../prisma";
 
 // The single Branding row (id "main"). Missing until an admin saves branding.

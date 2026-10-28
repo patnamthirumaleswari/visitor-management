@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
-import { read } from "@/lib/db";
+import { findVisitsWithPeople } from "@/lib/repos/visits";
 
 export const dynamic = "force-dynamic";
 
@@ -13,18 +13,11 @@ export async function GET(req: NextRequest) {
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
   if (q.length < 2) return NextResponse.json({ visitors: [] });
 
-  const visitors = read((d) =>
-    d.visits
-      .filter((v) => v.status === "signed_in")
-      .map((v) => ({ visit: v, visitor: d.visitors.find((p) => p.id === v.visitorId), host: d.hosts.find((h) => h.id === v.hostId) }))
-      .filter(({ visitor }) => visitor && visitor.name.toLowerCase().split(/\s+/).some((part) => part.startsWith(q)))
-      .slice(0, 8)
-      .map(({ visit, visitor, host }) => ({
-        id: visit.id,
-        name: shortName(visitor!.name),
-        host: host?.name.split(" ")[0] ?? "",
-      })),
-  );
+  const onSite = await findVisitsWithPeople({ status: "signed_in" }, { signedInAt: "desc" });
+  const visitors = onSite
+    .filter(({ visitor }) => visitor.name.toLowerCase().split(/\s+/).some((part) => part.startsWith(q)))
+    .slice(0, 8)
+    .map(({ visit, visitor, host }) => ({ id: visit.id, name: shortName(visitor.name), host: host.name.split(" ")[0] ?? "" }));
   return NextResponse.json({ visitors });
 }
 
