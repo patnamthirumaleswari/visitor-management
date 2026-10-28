@@ -1,0 +1,319 @@
+// Visitor Connect database (Supabase PostgreSQL). Replaces data/db.json.
+// Times are timestamps (UTC). Calendar days at the location ("2026-10-27") stay as text, so they never
+// shift with time zones. Pictures (photo, signature, logo, exit plan) are data URLs for now and move
+// to file storage (S3) later.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Supabase direct or session link (port 5432), used for migrations
+}
+
+// ───────── People ─────────
+
+enum StaffRole {
+  admin
+  receptionist
+  host
+  security
+}
+
+// A staff sign-in. A host's sign-in is linked to their employee record.
+model StaffUser {
+  id                 String    @id @default(uuid())
+  username           String    @unique
+  name               String
+  role               StaffRole
+  passwordHash       String
+  active             Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  hostId             String?   @unique
+  host               Host?     @relation(fields: [hostId], references: [id])
+  createdAt          DateTime  @default(now())
+  notificationReads  NotificationRead[]
+}
+
+// An employee visitors can come to see (also signs in at reception with a PIN or QR).
+model Host {
+  id             String          @id @default(uuid())
+  name           String
+  email          String
+  phone          String
+  department     String          @default("")
+  notifyBy       String[]        @default(["email"]) // "email" | "sms"
+  pinHash        String?
+  pinFailures    Int             @default(0)
+  pinLockedUntil DateTime?
+  qrToken        String?         @unique
+  active         Boolean         @default(true)
+  staffUser      StaffUser?
+  visits         Visit[]
+  employeeVisits EmployeeVisit[]
+  notifications  Notification[]
+
+  @@index([name])
+}
+
+model Visitor {
+  id      String  @id @default(uuid())
+  name    String
+  phone   String // 10 digits
+  email   String  @default("")
+  company String  @default("")
+  photo   String? // data URL for now
+  visits  Visit[]
+
+  @@index([phone])
+}
+
+// ───────── Visits ─────────
+
+enum VisitStatus {
+  expected
+  pending
+  review
+  signed_in
+  denied
+  checkout
+  gate
+  hold
+  signed_out
+}
+
+enum VisitSource {
+  qr
+  kiosk
+  portal
+}
+
+enum SignOutBy {
+  badge
+  kiosk
+  portal
+  auto
+  gate
+}
+
+model Visit {
+  id                  String       @id @default(uuid())
+  visitorId           String
+  visitor             Visitor      @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  hostId              String
+  host                Host         @relation(fields: [hostId], references: [id])
+  locationId          String
+  visitorTypeId       String
+  visitorType         VisitorType  @relation(fields: [visitorTypeId], references: [id])
+  purpose             String       @default("")
+  status              VisitStatus
+  source              VisitSource
+  expectedDate        String? // YYYY-MM-DD at the location, for invited visits
+  no                  Int? // visitor number (101, 102, …)
+  code                String? // 4-digit code for "Find my visit"
+  badgeToken          String       @unique
+  checkedInAt         DateTime?
+  signedInAt          DateTime?
+  decidedAt           DateTime?
+  decidedBy           String?
+  decisionNote        String?
+  escalated           Boolean      @default(false)
+  checkoutRequestedAt DateTime?
+  checkoutEscalated   Boolean      @default(false)
+  checkoutNote        String?
+  holdReason          String?
+  holdBy              String?
+  holdAt              DateTime?
+  watchName           String? // the watchlist entry it matched (admins only)
+  watchReason         String?
+  signedOutAt         DateTime?
+  signedOutBy         SignOutBy?
+  agreementVersion    String?
+  signature           String? // data URL for now
+  answers             Json         @default("[]") // [{ questionId, label, value }]
+  safetyVersion       Int?
+  ageConfirmed        Boolean      @default(false)
+  consentAt           DateTime?
+  timeline            TimelineEvent[]
+  invitation          Invitation?
+  notifications       Notification[]
+
+  @@index([status])
+  @@index([hostId, status])
+  @@index([checkedInAt])
+}
+
+// What happened during a visit, in order (the gate pass record and the activity tracker).
+model TimelineEvent {
+  id      String   @id @default(uuid())
+  visitId String
+  visit   Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  at      DateTime
+  event   String
+  by      String
+
+  @@index([visitId, at])
+  @@index([at])
+}
+
+model Invitation {
+  id        String    @id @default(uuid())
+  visitId   String    @unique
+  visit     Visit     @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  qrToken   String    @unique
+  validFrom String // YYYY-MM-DD
+  validTo   String
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+}
+
+// Wrong passwords per username + address, for the login lock. In the database (not memory) because
+// on Cloudflare each request can run on a different server.
+model LoginAttempt {
+  key         String    @id // "username|ip"
+  count       Int       @default(0)
+  firstAt     DateTime  @default(now())
+  lockedUntil DateTime?
+}
+
+// One-time sign-in sessions already used (stops one QR scan signing in twice).
+model UsedSession {
+  nonce  String   @id
+  usedAt DateTime @default(now())
+}
+
+// ───────── Notifications and inbox ─────────
+
+enum NotificationKind {
+  arrival
+  invitation
+  approval
+  escalation
+  checkout
+  hold
+  watchlist
+}
+
+enum NotificationStatus {
+  logged
+  sent
+  failed
+}
+
+model Notification {
+  id      String             @id @default(uuid())
+  kind    NotificationKind
+  visitId String
+  visit   Visit              @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  hostId  String?
+  host    Host?              @relation(fields: [hostId], references: [id])
+  to      String
+  channel String // "email" | "sms"
+  status  NotificationStatus
+  error   String?
+  sentAt  DateTime           @default(now())
+  reads   NotificationRead[]
+
+  @@index([hostId, sentAt])
+  @@index([kind, sentAt])
+}
+
+// Who has opened a notification in their inbox.
+model NotificationRead {
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  staffUserId    String
+  staffUser      StaffUser    @relation(fields: [staffUserId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@id([notificationId, staffUserId])
+}
+
+// ───────── Employees at reception ─────────
+
+model EmployeeVisit {
+  id          String    @id @default(uuid())
+  hostId      String
+  host        Host      @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  locationId  String
+  method      String // "pin" | "qr" | "portal"
+  signedInAt  DateTime
+  signedOutAt DateTime?
+  signedOutBy String? // "pin" | "qr" | "portal" | "auto"
+
+  @@index([hostId, signedOutAt])
+}
+
+// ───────── Admin-managed setup ─────────
+
+model VisitorType {
+  id                String  @id // "guest", "contractor", …
+  label             String
+  description       String  @default("")
+  color             String
+  fields            Json    @default("{}") // { company, email, purpose: "hidden" | "optional" | "required" }
+  photoRequired     Boolean @default(true)
+  agreementRequired Boolean @default(true)
+  approvalRequired  Boolean @default(true)
+  questions         Json    @default("[]") // [{ id, label, kind, required, options? }]
+  active            Boolean @default(true)
+  sortOrder         Int     @default(0)
+  visits            Visit[]
+}
+
+model WatchEntry {
+  id      String   @id @default(uuid())
+  name    String   @default("")
+  phone   String   @default("")
+  company String   @default("")
+  reason  String
+  active  Boolean  @default(true)
+  by      String
+  at      DateTime @default(now())
+
+  @@index([phone])
+}
+
+model AuditEntry {
+  id     String   @id @default(uuid())
+  at     DateTime @default(now())
+  action String
+  by     String
+  role   String
+  detail String   @default("")
+  ip     String   @default("")
+
+  @@index([at])
+}
+
+// One row each (id = "main"). Missing fields fall back to the defaults in lib/config.ts.
+model Branding {
+  id           String   @id @default("main")
+  companyName  String?
+  welcomeText  String?
+  primaryColor String?
+  logo         String?
+  updatedAt    DateTime @updatedAt
+}
+
+model SafetyBriefing {
+  id             String   @id @default("main")
+  enabled        Boolean  @default(true)
+  version        Int      @default(1)
+  emergencyPhone String
+  assemblyPoint  String
+  notes          String[]
+  rules          Json     @default("[]") // [{ kind, text }]
+  exitPlan       String?
+  updatedAt      DateTime @updatedAt
+}
+
+model Settings {
+  id              String  @id @default("main")
+  escalateMinutes Int?
+  autoSignoutTime String? // "20:00", "" = off
+  retentionDays   Int?
+  lastVisitNo     Int? // last visitor number handed out
+}
