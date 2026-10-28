@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit } from "@/lib/audit";
+import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { newId, normalizePhone, read, write, type WatchEntry } from "@/lib/db";
 import { isMobile, MOBILE_ERROR } from "@/lib/phone";
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   write((d) => {
     (d.watchlist ??= []).unshift(entry);
   });
-  audit(req, staff, "Watchlist entry added", `${name || phone}: ${reason}`);
+  await audit(req, staff, "Watchlist entry added", `${name || phone}: ${reason}`);
   return NextResponse.json({ entry });
 }
 

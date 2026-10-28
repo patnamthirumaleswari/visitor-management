@@ -1,10 +1,9 @@
 import QRCode from "qrcode";
-import { audit, auditVisit } from "@/lib/audit";
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { EMPLOYEE_QR_PREFIX } from "@/lib/config";
-import { write } from "@/lib/db";
-import { randomToken } from "@/lib/token";
+import { newOwnQrToken } from "@/lib/services/account";
+import { audit } from "@/lib/services/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +14,10 @@ export async function POST(req: Request) {
   if (staff instanceof NextResponse) return staff;
   if (!staff.hostId) return NextResponse.json({ error: "Your account isn't linked to an employee record." }, { status: 400 });
 
-  const token = write((d) => {
-    const host = d.hosts.find((h) => h.id === staff.hostId);
-    if (!host) return null;
-    host.qrToken = randomToken();
-    return host.qrToken;
-  });
+  const token = await newOwnQrToken(staff.hostId);
   if (!token) return NextResponse.json({ error: "Employee record not found." }, { status: 404 });
 
   const qr = await QRCode.toDataURL(EMPLOYEE_QR_PREFIX + token, { margin: 1, width: 400, errorCorrectionLevel: "M" });
-  audit(req, staff, "Made a new personal sign-in QR");
+  await audit(req, staff, "Made a new personal sign-in QR");
   return NextResponse.json({ qr });
 }

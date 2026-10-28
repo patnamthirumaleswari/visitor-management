@@ -1,5 +1,5 @@
 import StaffShell from "../../StaffShell";
-import { getAudit } from "@/lib/audit";
+import { getAudit } from "@/lib/services/audit";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
 import AuditTable from "./AuditTable";
 
@@ -10,7 +10,7 @@ export default async function AuditPage() {
   const staff = await requireStaffPage(ACCESS.reports, "/admin/audit");
   return (
     <StaffShell staff={staff}>
-      <AuditTable entries={getAudit()} />
+      <AuditTable entries={await getAudit()} />
     </StaffShell>
   );
 }

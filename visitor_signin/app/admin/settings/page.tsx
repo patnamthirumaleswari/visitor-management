@@ -1,7 +1,7 @@
 import StaffShell from "../../StaffShell";
 import Icon, { type IconName } from "../../Icon";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
-import { getSettings } from "@/lib/settings";
+import { getSettings } from "@/lib/services/settings";
 import SettingsForm from "./SettingsForm";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export default async function SettingsPage() {
           </div>
         </div>
         <div className="cols two">
-          <SettingsForm initial={getSettings()} />
+          <SettingsForm initial={await getSettings()} />
           <section className="panel">
             <div className="panel-h"><h3>More settings</h3></div>
             {MORE.map((m) => (

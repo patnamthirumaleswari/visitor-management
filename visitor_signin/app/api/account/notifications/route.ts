@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { write, type NotificationChannel } from "@/lib/db";
+import { setOwnNotifyBy } from "@/lib/services/account";
+import { audit } from "@/lib/services/audit";
 
 export const dynamic = "force-dynamic";
-
-const CHANNELS: NotificationChannel[] = ["email", "sms"];
 
 // A host chooses how they hear about arrivals: email, SMS or both (FR-NOT-06).
 // Only changes the logged-in user's own host record.
@@ -14,25 +12,11 @@ export async function PUT(req: Request) {
   if (staff instanceof NextResponse) return staff;
   if (!staff.hostId) return NextResponse.json({ error: "Your account isn't linked to a host." }, { status: 400 });
 
-  let body: { notifyBy?: unknown };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
+  const body = (await req.json().catch(() => null)) as { notifyBy?: unknown } | null;
+  if (!body) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  const result = await setOwnNotifyBy(staff.hostId, body.notifyBy);
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
 
-  const notifyBy = Array.isArray(body.notifyBy)
-    ? CHANNELS.filter((c) => (body.notifyBy as unknown[]).includes(c))
-    : [];
-  if (notifyBy.length === 0) return NextResponse.json({ error: "Choose email, SMS or both." }, { status: 400 });
-
-  const saved = write((d) => {
-    const host = d.hosts.find((h) => h.id === staff.hostId);
-    if (!host) return false;
-    host.notifyBy = notifyBy;
-    return true;
-  });
-  if (!saved) return NextResponse.json({ error: "Host not found." }, { status: 404 });
-  audit(req, staff, "Changed own notification settings", notifyBy.join(" + "));
-  return NextResponse.json({ notifyBy });
+  await audit(req, staff, "Changed own notification settings", result.notifyBy.join(" + "));
+  return NextResponse.json({ notifyBy: result.notifyBy });
 }

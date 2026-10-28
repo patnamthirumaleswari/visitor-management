@@ -97,8 +97,8 @@ export function todayForHost(hostId: string): RequestRow[] {
 }
 
 /** Marks requests nobody answered in time and tells reception about each. Call it from routes that poll. */
-export function checkEscalations() {
-  for (const v of sweepEscalations()) {
+export async function checkEscalations() {
+  for (const v of await sweepEscalations()) {
     const names = read((d) => ({
       visitor: d.visitors.find((p) => p.id === v.visitorId)?.name ?? "A visitor",
       host: d.hosts.find((h) => h.id === v.hostId)?.name ?? "their host",

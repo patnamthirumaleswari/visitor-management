@@ -5,6 +5,7 @@ import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX, LOCATION } from "@/lib/config";
 import { read } from "@/lib/db";
 import { openEmployeeVisit } from "@/lib/employees";
+import { findHostById } from "@/lib/repos/hosts";
 import NotificationSettings from "./NotificationSettings";
 import ReceptionSignIn from "./ReceptionSignIn";
 
@@ -18,13 +19,10 @@ function PasswordLink() {
 // and their PIN and personal QR for signing in at reception (FR-EMP-01).
 export default async function AccountPage() {
   const staff = await requireStaffPage(ACCESS.account, "/account");
-  sweepAutoSignOut(); // don't show "signed in since" for yesterday's forgotten sign-out
-  const found = staff.hostId
-    ? read((d) => {
-        const host = d.hosts.find((h) => h.id === staff.hostId);
-        return host ? { host, open: openEmployeeVisit(d, host.id) } : undefined;
-      })
-    : undefined;
+  await sweepAutoSignOut(); // don't show "signed in since" for yesterday's forgotten sign-out
+  const employee = staff.hostId ? await findHostById(staff.hostId) : null;
+  // TODO(module 6): read the open reception sign-in from Supabase.
+  const found = employee ? { host: employee, open: read((d) => openEmployeeVisit(d, employee.id)) } : undefined;
 
   if (!found) {
     return (

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
 import { cleanVisitorType } from "@/lib/visitorTypes";
@@ -29,7 +29,7 @@ export async function PUT(req: Request, { params }: Params) {
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-  audit(req, staff, "Visitor type changed", `${result.type.label}${result.type.active ? "" : " (hidden)"}`);
+  await audit(req, staff, "Visitor type changed", `${result.type.label}${result.type.active ? "" : " (hidden)"}`);
   return NextResponse.json(result);
 }
 
@@ -52,6 +52,6 @@ export async function DELETE(req: Request, { params }: Params) {
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-  audit(req, staff, "Visitor type deleted", id);
+  await audit(req, staff, "Visitor type deleted", id);
   return NextResponse.json(result);
 }

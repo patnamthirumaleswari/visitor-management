@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit } from "@/lib/audit";
+import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
 
@@ -20,7 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return e;
   });
   if (!entry) return NextResponse.json({ error: "Entry not found" }, { status: 404 });
-  audit(req, staff, active ? "Watchlist entry resumed" : "Watchlist entry paused", entry.name || entry.phone);
+  await audit(req, staff, active ? "Watchlist entry resumed" : "Watchlist entry paused", entry.name || entry.phone);
   return NextResponse.json({ entry });
 }
 
@@ -35,6 +35,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return i < 0 ? null : d.watchlist!.splice(i, 1)[0];
   });
   if (!removed) return NextResponse.json({ error: "Entry not found" }, { status: 404 });
-  audit(req, staff, "Watchlist entry removed", removed.name || removed.phone);
+  await audit(req, staff, "Watchlist entry removed", removed.name || removed.phone);
   return NextResponse.json({ ok: true });
 }

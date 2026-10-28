@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { read } from "@/lib/db";
-import { isActiveHost } from "@/lib/people";
+import { isActiveHost } from "@/lib/services/people";
 import { getSignInSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";

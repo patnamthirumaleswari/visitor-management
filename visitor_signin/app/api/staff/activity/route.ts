@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const staff = await requireStaffApi(ACCESS.decide);
   if (staff instanceof NextResponse) return staff;
 
-  checkEscalations();
+  await checkEscalations();
   const days = req.nextUrl.searchParams.get("days") === "7" ? 7 : 1;
   return NextResponse.json({ items: activityFor(staff, days) });
 }

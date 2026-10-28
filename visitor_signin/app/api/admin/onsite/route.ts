@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const staff = await requireStaffApi(ACCESS.onsiteList);
   if (staff instanceof NextResponse) return staff;
-  sweepAutoSignOut(); // so nobody past the end-of-day cut-off shows as on site
-  sweepOldRecords(); // at most once an hour: delete records past the retention time
+  await sweepAutoSignOut(); // so nobody past the end-of-day cut-off shows as on site
+  await sweepOldRecords(); // at most once an hour: delete records past the retention time
 
   const onsite = read((d) =>
     d.visits

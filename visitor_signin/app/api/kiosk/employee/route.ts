@@ -3,7 +3,7 @@ import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX } from "@/lib/config";
 import { write } from "@/lib/db";
 import { checkPin, toggleEmployee, type EmployeeResult } from "@/lib/employees";
-import { isActiveHost } from "@/lib/people";
+import { isActiveHost } from "@/lib/services/people";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   }
 
   // Close yesterday's visit first if they forgot to sign out, so this tap signs them in, not out.
-  sweepAutoSignOut();
+  await sweepAutoSignOut();
 
   const result: EmployeeResult = write((d) => {
     if (typeof body.qr === "string") {

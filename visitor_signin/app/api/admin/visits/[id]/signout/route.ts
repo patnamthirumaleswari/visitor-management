@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { addEvent, isOnSite } from "@/lib/approvals";
 import { write } from "@/lib/db";
@@ -24,6 +24,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
     return true;
   });
-  if (found) auditVisit(req, staff, "Visitor signed out by staff", id);
+  if (found) await auditVisit(req, staff, "Visitor signed out by staff", id);
   return found ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "Visit not found" }, { status: 404 });
 }

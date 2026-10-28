@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // last initial and the host's first name, e.g. "Ravi K. · visiting Priya". No phone, company or photo.
 // TODO: only paired reception tablets should call this (FR-KIO-02).
 export async function GET(req: NextRequest) {
-  sweepAutoSignOut();
+  await sweepAutoSignOut();
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
   if (q.length < 2) return NextResponse.json({ visitors: [] });
 

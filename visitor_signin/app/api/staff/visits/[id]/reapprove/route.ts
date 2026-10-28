@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { canReapprove, reapprove } from "@/lib/approvals";
 import { ACCESS, ROLE_LABELS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
@@ -26,6 +26,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-  auditVisit(req, staff, "Approved after all", id);
+  await auditVisit(req, staff, "Approved after all", id);
   return NextResponse.json({ status: result.visitStatus });
 }

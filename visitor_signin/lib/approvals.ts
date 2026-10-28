@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { FIRST_VISIT_NO, LOCATION } from "./config";
-import { getSettings } from "./settings";
+import { getSettings } from "./services/settings";
 import { read, write, type Data, type Visit, type VisitorType } from "./db";
 import type { Staff } from "./auth";
 
@@ -186,8 +186,8 @@ export function clearHold(visit: Visit, by: string, note = ""): string | null {
  * staff screens. Returns the newly escalated visits, so the caller can tell reception.
  * There's no scheduler in this prototype: it runs when staff screens or the reception screen load data.
  */
-export function sweepEscalations(): Visit[] {
-  const escalateMinutes = getSettings().escalateMinutes;
+export async function sweepEscalations(): Promise<Visit[]> {
+  const { escalateMinutes } = await getSettings();
   const late = (iso: string | undefined, now: number) => !!iso && now - new Date(iso).getTime() >= escalateMinutes * 60_000;
   const due = (v: Visit, now: number) =>
     (v.status === "pending" && !v.escalated && late(v.checkedInAt, now)) ||

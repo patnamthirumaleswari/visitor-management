@@ -2,7 +2,7 @@ import StaffShell from "../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { todayAtLocation } from "@/lib/dates";
 import { read } from "@/lib/db";
-import { isActiveHost } from "@/lib/people";
+import { isActiveHost } from "@/lib/services/people";
 import { getActiveVisitorTypes } from "@/lib/visitorTypes";
 import PreRegisterForm from "./PreRegisterForm";
 

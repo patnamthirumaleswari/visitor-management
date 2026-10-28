@@ -10,7 +10,7 @@ export async function GET() {
   const staff = await requireStaffApi(ACCESS.decide);
   if (staff instanceof NextResponse) return staff;
 
-  checkEscalations();
+  await checkEscalations();
   return NextResponse.json({
     pending: pendingFor(staff),
     today: staff.role === "host" && staff.hostId ? todayForHost(staff.hostId) : [],

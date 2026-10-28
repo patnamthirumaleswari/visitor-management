@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { write, type SafetyRule } from "@/lib/db";
 import { briefingFrom, RULE_KINDS } from "@/lib/safety";
@@ -63,7 +63,7 @@ export async function PUT(req: Request) {
     return d.safety;
   });
 
-  audit(req, staff, "Safety briefing saved", `Version ${saved.version}${saved.enabled ? "" : " (switched off)"}`);
+  await audit(req, staff, "Safety briefing saved", `Version ${saved.version}${saved.enabled ? "" : " (switched off)"}`);
   return NextResponse.json({ briefing: saved });
 }
 

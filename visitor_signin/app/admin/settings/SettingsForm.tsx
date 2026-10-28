@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Settings } from "@/lib/settings";
+import type { Settings } from "@/lib/services/settings";
 
 const KEEP = [30, 90, 180, 365, 730];
 

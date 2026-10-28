@@ -21,7 +21,7 @@ export default async function BadgePage({
 }) {
   const { id } = await params;
   const { t } = await searchParams;
-  sweepAutoSignOut(); // an old badge opened the next day shows "signed out", not "signed in"
+  await sweepAutoSignOut(); // an old badge opened the next day shows "signed out", not "signed in"
 
   const badge = t ? await loadBadge(id, t) : null;
   if (!badge) notFound();

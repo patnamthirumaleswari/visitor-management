@@ -1,6 +1,6 @@
 import type { Data } from "./db";
 import { todayAtLocation } from "./dates";
-import { isActiveHost } from "./people";
+import { isActiveHost } from "./services/people";
 
 /**
  * Finds an invitation that can be used to sign in right now: valid today, not used yet,

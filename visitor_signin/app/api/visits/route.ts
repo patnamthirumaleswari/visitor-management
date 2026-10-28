@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { cookies } from "next/headers";
 import { AGREEMENT } from "@/lib/config";
 import { newId, normalizePhone, write, type Host, type SafetyBriefing, type StandardField, type Visit, type Visitor, type VisitorType } from "@/lib/db";
@@ -7,7 +7,7 @@ import { findOpenInvitation } from "@/lib/invitations";
 import { addEvent, isOpen, needsApproval, newNumberAndCode } from "@/lib/approvals";
 import { briefingFrom, getBriefing } from "@/lib/safety";
 import { findWatchMatch } from "@/lib/watchlist";
-import { isActiveHost } from "@/lib/people";
+import { isActiveHost } from "@/lib/services/people";
 import { isMobile, MOBILE_ERROR } from "@/lib/phone";
 import { notifyHost, notifyHostApproval, notifyWatchlistMatch } from "@/lib/notify";
 import { getSignInSession, SESSION_COOKIE } from "@/lib/session";
@@ -226,7 +226,7 @@ async function finish({ host, visitor, visit }: { host: Host; visitor: Visitor; 
         : notifyHost(host, visitor, visit),
   );
 
-  auditVisit(null, { name: "Visitor (own phone)", role: "Visitor" }, visit.status === "review" ? "Visitor checked in (watchlist match)" : "Visitor checked in", visit.id, `Host ${host.name}`);
+  await auditVisit(null, { name: "Visitor (own phone)", role: "Visitor" }, visit.status === "review" ? "Visitor checked in (watchlist match)" : "Visitor checked in", visit.id, `Host ${host.name}`);
   return NextResponse.json({ id: visit.id, badgeToken: visit.badgeToken }, { status: 201 });
 }
 

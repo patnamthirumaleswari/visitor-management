@@ -1,11 +1,11 @@
 import QRCode from "qrcode";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { after, NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { publicBaseUrl } from "@/lib/baseUrl";
 import { LOCATION } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
-import { isActiveHost } from "@/lib/people";
+import { isActiveHost } from "@/lib/services/people";
 import { isMobile, MOBILE_ERROR } from "@/lib/phone";
 import { newId, normalizePhone, write, type Invitation, type Visit, type Visitor } from "@/lib/db";
 import { notifyVisitorInvited } from "@/lib/notify";
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
   const qr = await QRCode.toDataURL(inviteUrl, { margin: 1, width: 400, errorCorrectionLevel: "M" });
   after(() => notifyVisitorInvited(result.visitor, result.host, result.visit, inviteUrl));
 
-  audit(req, staff, "Visitor pre-registered", `${result.visitor.name} for ${visitDate}, host ${result.host.name}`);
+  await audit(req, staff, "Visitor pre-registered", `${result.visitor.name} for ${visitDate}, host ${result.host.name}`);
   return NextResponse.json({ inviteUrl, qr }, { status: 201 });
 }
 

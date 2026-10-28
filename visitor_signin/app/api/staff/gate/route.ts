@@ -11,7 +11,7 @@ export async function GET() {
   const staff = await requireStaffApi(ACCESS.gate);
   if (staff instanceof NextResponse) return staff;
 
-  checkEscalations();
+  await checkEscalations();
   const data = read((d) => {
     const queue = d.visits
       .filter((v) => v.status === "gate" || v.status === "hold")

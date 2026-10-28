@@ -2,7 +2,7 @@ import { newId, read, write, type Host, type Notification, type NotificationChan
 import { escapeHtml, sendEmail, sendSms, type SendResult } from "./channels";
 import { LOCATION } from "./config";
 import { publicBaseUrl } from "./baseUrl";
-import { getSettings } from "./settings";
+import { getSettings } from "./services/settings";
 import { formatDay } from "./dates";
 import { makeToken } from "./token";
 import { getBranding } from "./branding";
@@ -88,6 +88,7 @@ export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Vi
   const who = `${visitor.name}${visitor.company ? ` (${visitor.company})` : ""}`;
   const type = read((d) => typeDisplay(d, visit.visitorType).label);
   const link = decisionLink(visit);
+  const { escalateMinutes } = await getSettings();
   const answers: Array<[string, string]> = (visit.answers ?? []).map((a) => [a.label, a.value]);
   const record = { kind: "approval", visitId: visit.id, hostId: host.id } as const;
 
@@ -112,7 +113,7 @@ export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Vi
             ...answers.map(([q, a]) => `${q} ${a}`),
             "",
             `Approve or deny entry: ${link}`,
-            `If you don't answer within ${getSettings().escalateMinutes} minutes, reception is told.`,
+            `If you don't answer within ${escalateMinutes} minutes, reception is told.`,
           ].join("\n"),
           html: emailLayout(`
             <h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} is waiting at reception</h2>
@@ -121,7 +122,7 @@ export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Vi
             <p style="margin:20px 0">
               <a href="${escapeHtml(link)}" style="background:#059669;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700">Approve or deny</a>
             </p>
-            <p style="margin:0;color:#6b7280">If you don't answer within ${getSettings().escalateMinutes} minutes, reception is told.</p>`),
+            <p style="margin:0;color:#6b7280">If you don't answer within ${escalateMinutes} minutes, reception is told.</p>`),
           inlineImage: photo,
         }),
       );
@@ -186,7 +187,8 @@ export async function notifyWatchlistMatch(visitor: Visitor, visit: Visit) {
 export async function notifyReceptionEscalated(visit: Visit, visitorName: string, hostName: string) {
   const to = process.env.RECEPTION_EMAIL?.trim() || "reception (RECEPTION_EMAIL not set)";
   const what = visit.status === "checkout" ? "confirm their checkout" : "approve entry";
-  const text = `${visitorName} (visitor no. ${visit.no ?? ""}) has waited ${getSettings().escalateMinutes}+ minutes for ${hostName} to ${what}. Answer here: ${decisionLink(visit)}`;
+  const { escalateMinutes } = await getSettings();
+  const text = `${visitorName} (visitor no. ${visit.no ?? ""}) has waited ${escalateMinutes}+ minutes for ${hostName} to ${what}. Answer here: ${decisionLink(visit)}`;
   return deliver({ kind: "escalation", visitId: visit.id, channel: "email", to }, () =>
     sendEmail({
       to: process.env.RECEPTION_EMAIL?.trim() || "reception@localhost",

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { decide, type Decision } from "@/lib/approvals";
 import { write } from "@/lib/db";
 import { readToken } from "@/lib/token";
@@ -33,6 +33,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const action = decision === "approve"
     ? (result.visitStatus === "gate" ? "Checkout approved" : "Entry approved")
     : (result.visitStatus === "denied" ? "Entry not approved" : "Checkout declined");
-  auditVisit(req, { name: `${result.hostName} (from email)`, role: "Host" }, action, visitId, note ? `Note: ${note}` : "");
+  await auditVisit(req, { name: `${result.hostName} (from email)`, role: "Host" }, action, visitId, note ? `Note: ${note}` : "");
   return NextResponse.json({ status: result.visitStatus });
 }

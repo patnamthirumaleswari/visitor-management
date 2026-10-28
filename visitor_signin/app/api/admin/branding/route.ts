@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { getBranding, isHexColor } from "@/lib/branding";
 import { write } from "@/lib/db";
@@ -51,7 +51,7 @@ export async function PUT(req: Request) {
       updatedAt: new Date().toISOString(),
     };
   });
-  audit(req, staff, "Branding changed", `${companyName}${logo === null ? " · logo removed" : logo ? " · new logo" : ""}`);
+  await audit(req, staff, "Branding changed", `${companyName}${logo === null ? " · logo removed" : logo ? " · new logo" : ""}`);
   return NextResponse.json(getBranding());
 }
 

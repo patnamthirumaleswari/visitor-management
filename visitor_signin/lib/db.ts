@@ -190,9 +190,7 @@ export type SafetyBriefing = {
 };
 
 export type Data = {
-  audit?: import("./audit").AuditEntry[]; // audit log, newest first (FR-ROLE-02)
   counters?: { visitNo: number }; // last visitor number handed out
-  settings?: { escalateMinutes?: number; autoSignoutTime?: string; retentionDays?: number }; // see lib/settings.ts
   watchlist?: WatchEntry[];
   safety?: SafetyBriefing; // missing until an admin saves one: the starting briefing in lib/safety.ts applies
   visitorTypes: VisitorType[];

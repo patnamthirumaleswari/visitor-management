@@ -1,5 +1,5 @@
 import { after, NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit, auditVisit } from "@/lib/services/audit";
 import { canClearHold, canWorkGate, clearHold, gateHold, gateRelease } from "@/lib/approvals";
 import { ROLE_LABELS, requireStaffApi } from "@/lib/auth";
 import { write } from "@/lib/db";
@@ -41,6 +41,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
   const held = "held" in result ? result.held : null;
   if (held) after(() => notifyHostHold(held.host, held.visitor, held.visit));
-  auditVisit(req, staff, { release: "Released at gate", hold: "Held at gate", clear: "Hold cleared" }[action], id, reason ? `Reason: ${reason}` : "");
+  await auditVisit(req, staff, { release: "Released at gate", hold: "Held at gate", clear: "Hold cleared" }[action], id, reason ? `Reason: ${reason}` : "");
   return NextResponse.json({ status: result.visitStatus });
 }

@@ -1,6 +1,6 @@
-import { audit } from "./audit";
+import { audit } from "./services/audit";
 import { read, write, type Data, type Visit } from "./db";
-import { settingsFrom } from "./settings";
+import { getSettings } from "./services/settings";
 
 // Keeping records only as long as needed (privacy; NFR-SEC-01). Finished visits older than the
 // retention time in Settings are deleted, with their invitations and notification records, and
@@ -32,10 +32,10 @@ export function oldRecords(d: Data, days: number) {
 }
 
 /** Deletes old records if an hour has passed since the last run (or `force`). Returns how many visits went. */
-export function sweepOldRecords(force = false): number {
+export async function sweepOldRecords(force = false): Promise<number> {
   if (!force && Date.now() - lastRun < EVERY_MS) return 0;
   lastRun = Date.now();
-  const days = read((d) => settingsFrom(d).retentionDays);
+  const days = (await getSettings()).retentionDays;
   if (days <= 0) return 0;
   if (!read((d) => { const o = oldRecords(d, days); return o.visitIds.size + o.visitorIds.size + o.employeeVisitIds.size > 0; })) return 0;
 
@@ -48,7 +48,7 @@ export function sweepOldRecords(force = false): number {
     d.employeeVisits = d.employeeVisits.filter((e) => !employeeVisitIds.has(e.id));
     return { visits: visitIds.size, visitors: visitorIds.size, employees: employeeVisitIds.size };
   });
-  audit(null, { name: "System", role: "System" }, "Old records deleted",
+  await audit(null, { name: "System", role: "System" }, "Old records deleted",
     `Older than ${days} days: ${counts.visits} visits, ${counts.visitors} visitors, ${counts.employees} staff sign-ins`);
   return counts.visits;
 }

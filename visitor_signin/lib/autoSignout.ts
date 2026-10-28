@@ -1,19 +1,19 @@
 import { LOCATION } from "./config";
 import { read, write, type EmployeeVisit, type Visit } from "./db";
-import { getSettings } from "./settings";
+import { getSettings } from "./services/settings";
 
 // Automatic end-of-day sign-out (FR-KIO-10). Anyone still signed in when the sign-out time (Settings) passes,
 // visitor or employee (FR-EMP-01), is signed out, with the sign-out time set to that cut-off
 // rather than to when we noticed.
 //
 // There is no scheduler in this prototype, so the check runs whenever the reception screen or a staff
-// page asks for data (the reception screen does that every 30 s). In production run sweepAutoSignOut()
+// page asks for data (the reception screen does that every 30 s). In production run await sweepAutoSignOut()
 // from a cron job instead.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** The first cut-off time after the visitor signed in, in the location's time zone. */
-export function autoSignOutTime(signedInAt: string, time = getSettings().autoSignoutTime): Date | null {
+export function autoSignOutTime(signedInAt: string, time: string | null): Date | null {
   if (!time) return null;
   const [hours, minutes] = time.split(":").map(Number);
   const signedIn = new Date(signedInAt);
@@ -53,9 +53,9 @@ function isEmployeeDue(visit: EmployeeVisit, now: number, time: string | null) {
 }
 
 /** Signs out everyone whose cut-off has passed. Returns how many were signed out. */
-export function sweepAutoSignOut(): number {
+export async function sweepAutoSignOut(): Promise<number> {
   const now = Date.now();
-  const time = getSettings().autoSignoutTime;
+  const time = (await getSettings()).autoSignoutTime;
   if (!time) return 0;
   // Look first without writing, so the frequent calls don't rewrite the file every time.
   if (!read((d) => d.visits.some((v) => isDue(v, now, time)) || d.employeeVisits.some((v) => isEmployeeDue(v, now, time)))) return 0;
