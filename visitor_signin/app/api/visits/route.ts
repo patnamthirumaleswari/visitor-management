@@ -5,14 +5,15 @@ import { AGREEMENT } from "@/lib/config";
 import { newId, normalizePhone, write, type Host, type SafetyBriefing, type StandardField, type Visit, type Visitor, type VisitorType } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
 import { addEvent, isOpen, needsApproval, newNumberAndCode } from "@/lib/approvals";
-import { briefingFrom, getBriefing } from "@/lib/safety";
+import { getBriefing } from "@/lib/services/safety";
+import { getActiveVisitorTypes, listVisitorTypes } from "@/lib/services/visitorTypes";
 import { findWatchMatch } from "@/lib/watchlist";
 import { isActiveHost } from "@/lib/services/people";
 import { isMobile, MOBILE_ERROR } from "@/lib/phone";
 import { notifyHost, notifyHostApproval, notifyWatchlistMatch } from "@/lib/notify";
 import { getSignInSession, SESSION_COOKIE } from "@/lib/session";
 import { randomToken, type TokenPayload } from "@/lib/token";
-import { checkAnswers, fieldMode, findVisitorType, getActiveVisitorTypes, STANDARD_FIELDS } from "@/lib/visitorTypes";
+import { checkAnswers, fieldMode, STANDARD_FIELDS } from "@/lib/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -65,18 +66,19 @@ export async function POST(req: Request) {
 
 // Pre-registered visitor: name, phone, host and type come from the invitation (FR-KIO-09).
 async function signInInvited(session: TokenPayload, body: Body, token: string) {
+  const [types, briefing] = await Promise.all([listVisitorTypes(), getBriefing()]);
   const result = write((d) => {
     if (d.usedSessions.includes(session.n)) return { error: SESSION_USED, status: 409 };
     const match = findOpenInvitation(d, { token }, session.d);
     if (!match) return { error: "This invitation isn't valid today. Please sign in as a walk-in visitor.", status: 404 };
 
     // The type chosen when they were invited, even if an admin has hidden it since.
-    const type = findVisitorType(d, match.visit.visitorType) ?? d.visitorTypes[0];
+    const type = types.find((t) => t.id === match.visit.visitorType) ?? types[0];
     const problem = checkPhotoAndAgreement(type, body);
     if (problem) return { error: problem, status: 400 };
     const checked = checkAnswers(type, body.answers);
     if ("error" in checked) return { error: checked.error, status: 400 };
-    const safety = checkSafety(briefingFrom(d), body);
+    const safety = checkSafety(briefing, body);
     if ("error" in safety) return { error: safety.error, status: 400 };
 
     const now = new Date().toISOString();
@@ -112,7 +114,7 @@ async function signInInvited(session: TokenPayload, body: Body, token: string) {
 
 async function signInWalkIn(session: TokenPayload, body: Body) {
   // Only types currently offered at sign-in (hidden ones can't be picked).
-  const type = getActiveVisitorTypes().find((t) => t.id === body.visitorType);
+  const type = (await getActiveVisitorTypes()).find((t) => t.id === body.visitorType);
   const name = clean(body.name);
   const phone = normalizePhone(clean(body.phone, 20));
   if (!type) return bad("Choose a visitor type.");
@@ -132,7 +134,7 @@ async function signInWalkIn(session: TokenPayload, body: Body) {
   if (problem) return bad(problem);
   const checked = checkAnswers(type, body.answers);
   if ("error" in checked) return bad(checked.error);
-  const safety = checkSafety(getBriefing(), body);
+  const safety = checkSafety(await getBriefing(), body);
   if ("error" in safety) return bad(safety.error);
 
   const result = write((d) => {

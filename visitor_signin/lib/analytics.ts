@@ -2,6 +2,7 @@ import { LOCATION } from "./config";
 import { dayAt, hourAt } from "./dates";
 import { read, type Data, type Visit } from "./db";
 import { typeDisplay } from "./visitorTypes";
+import { listVisitorTypes } from "./services/visitorTypes";
 
 // Analytics (FR-REP-01) and the CSV export (FR-REP-02). Everything is worked out from the visits in
 // db.json; a visit counts on the day it checked in (or was signed in, for older records).
@@ -39,7 +40,8 @@ export type Analytics = {
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const minutes = (from: string, to: string) => (new Date(to).getTime() - new Date(from).getTime()) / 60_000;
 
-export function getAnalytics(days: number): Analytics {
+export async function getAnalytics(days: number): Promise<Analytics> {
+  const visitorTypes = await listVisitorTypes();
   return read((d) => {
     const visits = visitsInRange(d, days);
 
@@ -81,7 +83,7 @@ export function getAnalytics(days: number): Analytics {
       perDay,
       perHour,
       topHosts: rank(hosts, (id, count) => ({ name: d.hosts.find((h) => h.id === id)?.name ?? "Unknown", count })),
-      byType: rank(types, (id, count) => ({ ...typeDisplay(d, id), count })),
+      byType: rank(types, (id, count) => ({ ...typeDisplay(visitorTypes, id), count })),
     };
   });
 }
@@ -110,7 +112,8 @@ function cell(value: unknown): string {
 /** "23/10/2026, 14:05" at the location. */
 const local = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { timeZone: LOCATION.timezone, dateStyle: "short", timeStyle: "short" }) : "");
 
-export function visitsCsv(days: number): string {
+export async function visitsCsv(days: number): Promise<string> {
+  const visitorTypes = await listVisitorTypes();
   return read((d) => {
     const header = ["Visitor no.", "Name", "Company", "Phone", "Email", "Type", "Host", "Status", "Checked in", "Entered", "Signed out", "Signed out by", "Decided by", "Watchlist"];
     const rows = visitsInRange(d, days)
@@ -123,7 +126,7 @@ export function visitsCsv(days: number): string {
           p?.company,
           p?.phone,
           p?.email,
-          typeDisplay(d, v.visitorType).label,
+          typeDisplay(visitorTypes, v.visitorType).label,
           d.hosts.find((h) => h.id === v.hostId)?.name,
           STATUS_LABELS[v.status],
           local(v.checkedInAt),

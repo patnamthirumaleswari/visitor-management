@@ -1,5 +1,5 @@
 import BrandLine from "../BrandLine";
-import { getBranding } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import { LOCATION } from "@/lib/config";
 import { getSettings } from "@/lib/services/settings";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Privacy notice for visitors, linked from the consent tick during sign-in. Plain language; the
 // company should have its legal team check the wording before going live.
 export default async function PrivacyPage() {
-  const { companyName } = getBranding();
+  const { companyName } = await getBranding();
   const { retentionDays } = await getSettings();
   const keep = retentionDays ? `${retentionDays} days after your visit ends` : "until an administrator deletes them";
 

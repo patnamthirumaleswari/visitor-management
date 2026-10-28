@@ -12,7 +12,7 @@ export async function GET() {
 
   await checkEscalations();
   return NextResponse.json({
-    pending: pendingFor(staff),
-    today: staff.role === "host" && staff.hostId ? todayForHost(staff.hostId) : [],
+    pending: await pendingFor(staff),
+    today: staff.role === "host" && staff.hostId ? await todayForHost(staff.hostId) : [],
   });
 }

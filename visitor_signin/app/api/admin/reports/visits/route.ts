@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   const days: Range = RANGES.includes(asked as Range) ? (asked as Range) : 30;
   await audit(req, staff, "Visit report downloaded", `Last ${days} days (CSV)`);
 
-  return new NextResponse(visitsCsv(days), {
+  return new NextResponse(await visitsCsv(days), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="visits-last-${days}-days-${todayAtLocation()}.csv"`,

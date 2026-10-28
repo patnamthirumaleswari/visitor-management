@@ -1,31 +1,19 @@
 import crypto from "node:crypto";
-import {
-  read,
-  type Answer,
-  type Data,
-  type FieldMode,
-  type Question,
-  type QuestionKind,
-  type StandardField,
-  type VisitorType,
+import type {
+  Answer,
+  FieldMode,
+  Question,
+  QuestionKind,
+  StandardField,
+  VisitorType,
 } from "./db";
 
-// Visitor types and their questions (FR-KIO-04/05/07), stored in data/db.json and edited on
-// /admin/visitor-types.
-
-/** Types offered at sign-in and pre-registration (hidden ones left out). */
-export function getActiveVisitorTypes(): VisitorType[] {
-  return read((d) => d.visitorTypes.filter((t) => t.active));
-}
-
-/** Any type by id, hidden or not: past visits and badges still need their label and colour. */
-export function findVisitorType(d: Data, id: string): VisitorType | undefined {
-  return d.visitorTypes.find((t) => t.id === id);
-}
+// Visitor types and their questions (FR-KIO-04/05/07): the rules for a type's fields and questions.
+// Loading and saving them is in lib/services/visitorTypes.ts.
 
 /** Label and colour for showing a visit, with a grey fallback if the type was deleted. */
-export function typeDisplay(d: Data, id: string): { label: string; color: string } {
-  const type = findVisitorType(d, id);
+export function typeDisplay(types: VisitorType[], id: string): { label: string; color: string } {
+  const type = types.find((t) => t.id === id);
   return { label: type?.label ?? id, color: type?.color ?? "#6b7280" };
 }
 
@@ -127,9 +115,9 @@ export function cleanVisitorType(raw: unknown, id: string): { type: VisitorType 
 }
 
 /** A readable, unique id for a new type, e.g. "delivery" or "delivery-2". */
-export function newVisitorTypeId(d: Data, label: string): string {
+export function newVisitorTypeId(existingIds: string[], label: string): string {
   const base = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "type";
   let id = base;
-  for (let n = 2; d.visitorTypes.some((t) => t.id === id); n++) id = `${base}-${n}`;
+  for (let n = 2; existingIds.includes(id); n++) id = `${base}-${n}`;
   return id;
 }

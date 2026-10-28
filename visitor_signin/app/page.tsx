@@ -1,7 +1,7 @@
 import Icon from "./Icon";
 import Logo from "./Logo";
 import { isOnSite } from "@/lib/approvals";
-import { getBranding } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import { LOCATION } from "@/lib/config";
 import { todayAtLocation } from "@/lib/dates";
 import { read } from "@/lib/db";
@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 
 // Landing page (Visitor Connect design): what the app is, live numbers, and the way in for
 // visitors (the reception screen) and for each kind of staff.
-export default function Home() {
-  const brand = getBranding();
+export default async function Home() {
+  const brand = await getBranding();
   const today = todayAtLocation();
   const dayOf = (iso?: string) =>
     iso ? new Intl.DateTimeFormat("en-CA", { timeZone: LOCATION.timezone }).format(new Date(iso)) : "";

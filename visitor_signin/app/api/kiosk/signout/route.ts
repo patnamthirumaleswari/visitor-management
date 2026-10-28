@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { after, NextResponse } from "next/server";
 import { requestCheckout } from "@/lib/approvals";
 import { notifyHostCheckout } from "@/lib/notify";
-import { findVisitorType } from "@/lib/visitorTypes";
+import { listVisitorTypes } from "@/lib/services/visitorTypes";
 import { write, type Visit } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Choose your name or scan your badge." }, { status: 400 });
   }
 
+  const types = await listVisitorTypes();
   const result = write((d) => {
     const visit = d.visits.find((v) => v.id === visitId);
     if (!visit || (token !== undefined && !safeEqual(visit.badgeToken, token))) return { error: "We couldn't find that visit." } as const;
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     const firstName = visitor?.name.split(" ")[0] ?? "";
     // Visitor Connect: leaving goes through the host's confirmation and security at the gate.
     if (visit.status !== "signed_in") return { firstName, already: true, next: visit.status } as const;
-    requestCheckout(visit, findVisitorType(d, visit.visitorType) ?? {}, "Visitor (reception screen)");
+    requestCheckout(visit, types.find((t) => t.id === visit.visitorType) ?? {}, "Visitor (reception screen)");
     const next = visit.status as Visit["status"]; // changed by requestCheckout: "checkout", or "gate" if no approval is needed
     const host = d.hosts.find((h) => h.id === visit.hostId);
     return { firstName, already: false, next, notify: next === "checkout" && host && visitor ? { host, visitor, visit: { ...visit } } : null } as const;

@@ -1,5 +1,5 @@
 import { LOCATION } from "./config";
-import { read, type Data, type SafetyBriefing } from "./db";
+import type { SafetyBriefing } from "./db";
 export { RULE_KINDS } from "./safetyRules";
 
 // Site safety briefing (Visitor Connect): emergency number, assembly point, notes, site rules with
@@ -30,15 +30,6 @@ export function startingBriefing(): SafetyBriefing {
     exitPlan: null,
     updatedAt: new Date(0).toISOString(),
   };
-}
-
-export function briefingFrom(d: Data): SafetyBriefing {
-  return d.safety ?? startingBriefing();
-}
-
-/** The briefing visitors see now. */
-export function getBriefing(): SafetyBriefing {
-  return read(briefingFrom);
 }
 
 /** What the visitor's phone shows: the briefing plus the location name. */

@@ -13,5 +13,5 @@ export async function GET(req: NextRequest) {
 
   await checkEscalations();
   const days = req.nextUrl.searchParams.get("days") === "7" ? 7 : 1;
-  return NextResponse.json({ items: activityFor(staff, days) });
+  return NextResponse.json({ items: await activityFor(staff, days) });
 }

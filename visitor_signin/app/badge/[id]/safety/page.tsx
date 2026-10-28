@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Icon from "../../../Icon";
 import SafetyBriefingView from "../../../SafetyBriefingView";
 import { read } from "@/lib/db";
-import { getBriefing } from "@/lib/safety";
+import { getBriefing } from "@/lib/services/safety";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export default async function VisitorSafetyPage({
       <a className="btn ghost sm" href={`/badge/${id}?t=${t}`} style={{ justifySelf: "start" }}><Icon name="back" />Back to my visit</a>
       <div className="card">
         <h1 style={{ marginBottom: 0 }}>Safety &amp; emergency</h1>
-        <SafetyBriefingView briefing={getBriefing()} />
+        <SafetyBriefingView briefing={await getBriefing()} />
       </div>
     </main>
   );

@@ -3,7 +3,7 @@ import { isMobile } from "@/lib/phone";
 import { normalizePhone, read } from "@/lib/db";
 import { findOpenInvitation } from "@/lib/invitations";
 import { getSignInSession } from "@/lib/session";
-import { findVisitorType } from "@/lib/visitorTypes";
+import { findVisitorType } from "@/lib/services/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +17,9 @@ export async function GET(req: NextRequest) {
   const phone = normalizePhone(req.nextUrl.searchParams.get("phone") ?? "");
   if (!token && !isMobile(phone)) return NextResponse.json({ invitation: null });
 
-  const match = read((d) => {
-    const found = findOpenInvitation(d, token ? { token } : { phone }, session.d);
-    // The full type, with its questions, even if an admin has hidden it since the invite was sent.
-    return found && { ...found, type: findVisitorType(d, found.visit.visitorType) ?? null };
-  });
+  const found = read((d) => findOpenInvitation(d, token ? { token } : { phone }, session.d));
+  // The full type, with its questions, even if an admin has hidden it since the invite was sent.
+  const match = found && { ...found, type: await findVisitorType(found.visit.visitorType) };
   return NextResponse.json({
     invitation: match && {
       token: match.invitation.qrToken,

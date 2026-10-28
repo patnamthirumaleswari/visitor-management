@@ -3,7 +3,7 @@ import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { todayAtLocation } from "@/lib/dates";
 import { read } from "@/lib/db";
 import { isActiveHost } from "@/lib/services/people";
-import { getActiveVisitorTypes } from "@/lib/visitorTypes";
+import { getActiveVisitorTypes } from "@/lib/services/visitorTypes";
 import PreRegisterForm from "./PreRegisterForm";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function PreRegisterPage() {
   );
   return (
     <StaffShell staff={staff}>
-      <PreRegisterForm hosts={hosts} visitorTypes={getActiveVisitorTypes()} today={todayAtLocation()} />
+      <PreRegisterForm hosts={hosts} visitorTypes={await getActiveVisitorTypes()} today={todayAtLocation()} />
     </StaffShell>
   );
 }

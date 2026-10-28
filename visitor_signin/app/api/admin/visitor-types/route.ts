@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { write } from "@/lib/db";
-import { cleanVisitorType, newVisitorTypeId } from "@/lib/visitorTypes";
+import { audit } from "@/lib/services/audit";
+import { addVisitorType } from "@/lib/services/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -11,16 +10,9 @@ export async function POST(req: Request) {
   const staff = await requireStaffApi(ACCESS.visitorTypes);
   if (staff instanceof NextResponse) return staff;
 
-  const body = await req.json().catch(() => null);
-  const result = write((d) => {
-    const label = typeof body?.label === "string" ? body.label : "";
-    const cleaned = cleanVisitorType(body, newVisitorTypeId(d, label));
-    if ("error" in cleaned) return cleaned;
-    d.visitorTypes.push(cleaned.type);
-    return cleaned;
-  });
-
+  const result = await addVisitorType(await req.json().catch(() => null));
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
+
   await audit(req, staff, "Visitor type added", result.type.label);
   return NextResponse.json({ type: result.type }, { status: 201 });
 }

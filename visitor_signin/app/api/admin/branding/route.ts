@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/services/audit";
+import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { getBranding, isHexColor } from "@/lib/branding";
-import { write } from "@/lib/db";
+import { isHexColor } from "@/lib/branding";
+import { saveBranding } from "@/lib/services/branding";
 
 export const dynamic = "force-dynamic";
 
@@ -41,18 +41,9 @@ export async function PUT(req: Request) {
     logo = body.logo;
   }
 
-  write((d) => {
-    const current = d.branding ?? {};
-    d.branding = {
-      companyName,
-      welcomeText,
-      primaryColor: (body.primaryColor as string).toLowerCase(),
-      ...(logo === undefined ? (current.logo ? { logo: current.logo } : {}) : logo ? { logo } : {}),
-      updatedAt: new Date().toISOString(),
-    };
-  });
+  const saved = await saveBranding({ companyName, welcomeText, primaryColor: body.primaryColor as string, logo });
   await audit(req, staff, "Branding changed", `${companyName}${logo === null ? " · logo removed" : logo ? " · new logo" : ""}`);
-  return NextResponse.json(getBranding());
+  return NextResponse.json(saved);
 }
 
 function bad(error: string) {

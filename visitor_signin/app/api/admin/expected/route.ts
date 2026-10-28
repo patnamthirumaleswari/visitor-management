@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { todayAtLocation } from "@/lib/dates";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { read, type Data } from "@/lib/db";
+import { read } from "@/lib/db";
 import { typeDisplay } from "@/lib/visitorTypes";
+import { listVisitorTypes } from "@/lib/services/visitorTypes";
+import type { VisitorType } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const staff = await requireStaffApi(ACCESS.admin);
   if (staff instanceof NextResponse) return staff;
+  const types = await listVisitorTypes();
 
   const today = todayAtLocation();
   const expected = read((d) =>
@@ -25,7 +28,7 @@ export async function GET() {
           phone: visitor?.phone ?? "",
           host: d.hosts.find((h) => h.id === v.hostId)?.name ?? "",
           visitorType: v.visitorType,
-          ...typeDisplayFields(d, v.visitorType),
+          ...typeDisplayFields(types, v.visitorType),
         };
       }),
   );
@@ -33,7 +36,7 @@ export async function GET() {
 }
 
 /** Label and colour of the visit's type, so the page doesn't need its own copy of the types. */
-function typeDisplayFields(d: Data, typeId: string) {
-  const { label, color } = typeDisplay(d, typeId);
+function typeDisplayFields(types: VisitorType[], typeId: string) {
+  const { label, color } = typeDisplay(types, typeId);
   return { typeLabel: label, typeColor: color };
 }

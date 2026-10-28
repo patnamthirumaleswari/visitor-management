@@ -22,7 +22,7 @@ const fmt = (iso?: string) =>
 export default async function VisitDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const staff = await requireStaffPage(["admin", "receptionist", "security", "host"], `/visits/${id}`);
-  const pass = loadPass(id, null);
+  const pass = await loadPass(id, null);
   if (!pass || (staff.role === "host" && pass.visit.hostId !== staff.hostId)) notFound();
 
   const { visit, visitor } = pass;

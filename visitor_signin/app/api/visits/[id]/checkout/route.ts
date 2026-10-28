@@ -4,7 +4,7 @@ import { after, NextResponse } from "next/server";
 import { requestCheckout } from "@/lib/approvals";
 import { write } from "@/lib/db";
 import { notifyHostCheckout } from "@/lib/notify";
-import { findVisitorType } from "@/lib/visitorTypes";
+import { listVisitorTypes } from "@/lib/services/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -15,10 +15,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const { token } = (await req.json().catch(() => ({}))) as { token?: string };
 
+  const types = await listVisitorTypes();
   const result = write((d) => {
     const visit = d.visits.find((v) => v.id === id);
     if (!visit || !token || !safeEqual(visit.badgeToken, token)) return { error: "Visit not found.", status: 404 };
-    const type = findVisitorType(d, visit.visitorType) ?? {};
+    const type = types.find((t) => t.id === visit.visitorType) ?? {};
     const already = visit.status === "checkout";
     const problem = requestCheckout(visit, type, "Visitor (own phone)");
     if (problem) return { error: problem, status: 409 };

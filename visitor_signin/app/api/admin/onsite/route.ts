@@ -3,8 +3,10 @@ import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { isOnSite } from "@/lib/approvals";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { sweepOldRecords } from "@/lib/retention";
-import { read, type Data } from "@/lib/db";
+import { read } from "@/lib/db";
 import { typeDisplay } from "@/lib/visitorTypes";
+import { listVisitorTypes } from "@/lib/services/visitorTypes";
+import type { VisitorType } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const staff = await requireStaffApi(ACCESS.onsiteList);
   if (staff instanceof NextResponse) return staff;
+  const types = await listVisitorTypes();
   await sweepAutoSignOut(); // so nobody past the end-of-day cut-off shows as on site
   await sweepOldRecords(); // at most once an hour: delete records past the retention time
 
@@ -33,7 +36,7 @@ export async function GET() {
           photo: visitor?.photo ?? null,
           host: host?.name ?? "",
           visitorType: v.visitorType,
-          ...typeDisplayFields(d, v.visitorType),
+          ...typeDisplayFields(types, v.visitorType),
           answers: v.answers ?? [], // the visitor type's questions (FR-KIO-05)
           source: v.source,
           signedInAt: v.signedInAt,
@@ -85,7 +88,7 @@ export async function GET() {
 }
 
 /** Label and colour of the visit's type, so the page doesn't need its own copy of the types. */
-function typeDisplayFields(d: Data, typeId: string) {
-  const { label, color } = typeDisplay(d, typeId);
+function typeDisplayFields(types: VisitorType[], typeId: string) {
+  const { label, color } = typeDisplay(types, typeId);
   return { typeLabel: label, typeColor: color };
 }

@@ -1,6 +1,7 @@
 import type { Staff } from "./auth";
 import { read } from "./db";
 import { typeDisplay } from "./visitorTypes";
+import { listVisitorTypes } from "./services/visitorTypes";
 
 // Activity tracker: everything that happened with visits, newest first, from each visit's timeline.
 // A host sees their own visitors; admins and reception see everyone's.
@@ -21,7 +22,8 @@ export type ActivityItem = {
 
 const MAX_ITEMS = 300;
 
-export function activityFor(staff: Staff, days: number): ActivityItem[] {
+export async function activityFor(staff: Staff, days: number): Promise<ActivityItem[]> {
+  const types = await listVisitorTypes();
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
   return read((d) => {
     const items: ActivityItem[] = [];
@@ -41,7 +43,7 @@ export function activityFor(staff: Staff, days: number): ActivityItem[] {
           photo: visitor?.photo ?? null,
           no: v.no,
           host: host?.name ?? "",
-          typeLabel: typeDisplay(d, v.visitorType).label,
+          typeLabel: typeDisplay(types, v.visitorType).label,
           status: v.status,
         });
       }
