@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import ClearHoldButton from "../ClearHoldButton";
 import Icon from "../Icon";
 import { StatusPill } from "../RequestList";
-import type { RequestRow } from "@/lib/requests";
+import type { RequestRow } from "@/lib/services/requests";
 
 type GateRow = RequestRow & { hold: { reason: string; by: string; at: string } | null; clearedBy: string | null; clearedAt: string | null };
 

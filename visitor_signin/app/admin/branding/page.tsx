@@ -1,6 +1,7 @@
 import StaffShell from "../../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
-import { DEFAULT_BRANDING, getBranding } from "@/lib/branding";
+import { DEFAULT_BRANDING } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import BrandingForm from "./BrandingForm";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export default async function BrandingPage() {
   const staff = await requireStaffPage(ACCESS.branding, "/admin/branding");
   return (
     <StaffShell staff={staff}>
-      <BrandingForm initial={getBranding()} defaults={DEFAULT_BRANDING} />
+      <BrandingForm initial={await getBranding()} defaults={DEFAULT_BRANDING} />
     </StaffShell>
   );
 }

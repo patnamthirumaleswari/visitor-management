@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
-import { read, type StaffRole, type StaffUser } from "./db";
+import type { StaffRole, StaffUser } from "./types";
+import { findStaffById } from "./repos/staff";
 import { readToken } from "./token";
 
 // Staff login (NFR-SEC-02/03). The cookie holds a signed token with the staff user's id;
@@ -49,7 +50,7 @@ export function homeFor(role: StaffRole): string {
 export async function getStaff(): Promise<Staff | null> {
   const token = readToken((await cookies()).get(STAFF_COOKIE)?.value, "staff");
   if (!token) return null;
-  const user = read((d) => d.staff.find((s) => s.id === token.d));
+  const user = await findStaffById(token.d);
   if (!user || user.active === false) return null; // switched off on /admin/people
   const { passwordHash: _, ...staff } = user;
   return staff;

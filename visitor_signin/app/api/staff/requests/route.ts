@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { checkEscalations, pendingFor, todayForHost } from "@/lib/requests";
+import { checkEscalations, pendingFor, todayForHost } from "@/lib/services/requests";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +10,9 @@ export async function GET() {
   const staff = await requireStaffApi(ACCESS.decide);
   if (staff instanceof NextResponse) return staff;
 
-  checkEscalations();
+  await checkEscalations();
   return NextResponse.json({
-    pending: pendingFor(staff),
-    today: staff.role === "host" && staff.hostId ? todayForHost(staff.hostId) : [],
+    pending: await pendingFor(staff),
+    today: staff.role === "host" && staff.hostId ? await todayForHost(staff.hostId) : [],
   });
 }

@@ -8,8 +8,8 @@ import StaffShell from "../../StaffShell";
 import { canClearHold, canDecide, canReapprove, isOnSite, isOpen, reapproveProblem } from "@/lib/approvals";
 import { homeFor, requireStaffPage } from "@/lib/auth";
 import { LOCATION } from "@/lib/config";
-import { read } from "@/lib/db";
 import { loadPass } from "@/lib/gatepass";
+import { checkedInAgainSince } from "@/lib/services/visitActions";
 import VisitActions from "./VisitActions";
 
 export const dynamic = "force-dynamic";
@@ -22,11 +22,11 @@ const fmt = (iso?: string) =>
 export default async function VisitDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const staff = await requireStaffPage(["admin", "receptionist", "security", "host"], `/visits/${id}`);
-  const pass = loadPass(id, null);
+  const pass = await loadPass(id, null);
   if (!pass || (staff.role === "host" && pass.visit.hostId !== staff.hostId)) notFound();
 
   const { visit, visitor } = pass;
-  const reapproveNote = visit.status === "denied" ? read((d) => reapproveProblem(d, d.visits.find((v) => v.id === id)!)) : null;
+  const reapproveNote = visit.status === "denied" ? reapproveProblem(visit, await checkedInAgainSince(visit)) : null;
   // The Actions panel only shows when there's something this person can do (or a reason they can't approve after all).
   const actions = {
     canDecide: canDecide(staff, visit),

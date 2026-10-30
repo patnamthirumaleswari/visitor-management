@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FieldMode, Question, QuestionKind, StandardField, VisitorType } from "@/lib/db";
+import type { FieldMode, Question, QuestionKind, StandardField, VisitorType } from "@/lib/types";
 
 type Props = { initialTypes: VisitorType[]; usage: Record<string, number> };
 

@@ -1,7 +1,6 @@
 import StaffShell from "../../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
-import { read } from "@/lib/db";
-import { peopleRows } from "@/lib/people";
+import { listPeople } from "@/lib/services/people";
 import PeopleManager from "./PeopleManager";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +10,7 @@ export default async function PeoplePage() {
   const staff = await requireStaffPage(ACCESS.people, "/admin/people");
   return (
     <StaffShell staff={staff}>
-      <PeopleManager initial={read(peopleRows)} meId={staff.id} />
+      <PeopleManager initial={await listPeople()} meId={staff.id} />
     </StaffShell>
   );
 }

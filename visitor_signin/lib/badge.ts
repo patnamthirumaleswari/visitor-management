@@ -1,9 +1,12 @@
 import QRCode from "qrcode";
 import { publicBaseUrl } from "./baseUrl";
-import { getBranding, type ResolvedBranding } from "./branding";
+import type { ResolvedBranding } from "./branding";
+import { getBranding } from "./services/branding";
 import { LOCATION } from "./config";
-import { read, type Visit } from "./db";
+import type { Visit } from "./types";
+import { findVisitWithPeople } from "./repos/visits";
 import { typeDisplay } from "./visitorTypes";
+import { listVisitorTypes } from "./services/visitorTypes";
 
 // Everything a visitor badge shows (FR-BAD-02), for the phone badge and the printed one.
 
@@ -23,21 +26,12 @@ export type BadgeData = {
 
 /** Loads a badge. Pass the badge token for the visitor's own link; staff pages pass null after their own login check. */
 export async function loadBadge(visitId: string, token: string | null): Promise<BadgeData | null> {
-  const found = read((d) => {
-    const visit = d.visits.find((v) => v.id === visitId);
-    // An "expected" visit has no badge yet: the visitor hasn't signed in.
-    if (!visit || visit.status === "expected") return null;
-    if (token !== null && visit.badgeToken !== token) return null;
-    return {
-      visit,
-      visitor: d.visitors.find((v) => v.id === visit.visitorId),
-      host: d.hosts.find((h) => h.id === visit.hostId),
-      type: typeDisplay(d, visit.visitorType),
-    };
-  });
-  if (!found?.visitor) return null;
-
-  const { visit, visitor, host, type } = found;
+  const [types, branding, found] = await Promise.all([listVisitorTypes(), getBranding(), findVisitWithPeople(visitId)]);
+  // An "expected" visit has no badge yet: the visitor hasn't signed in.
+  if (!found || found.visit.status === "expected") return null;
+  if (token !== null && found.visit.badgeToken !== token) return null;
+  const { visit, visitor, host } = found;
+  const type = typeDisplay(types, visit.visitorType);
   const signedIn = new Date(visit.signedInAt ?? Date.now());
   const qr = await QRCode.toDataURL(`${publicBaseUrl()}/badge/${visit.id}?t=${visit.badgeToken}`, {
     margin: 1,
@@ -47,7 +41,7 @@ export async function loadBadge(visitId: string, token: string | null): Promise<
 
   return {
     visit,
-    branding: getBranding(),
+    branding,
     visitorName: visitor.name,
     company: visitor.company,
     photo: visitor.photo ?? null,

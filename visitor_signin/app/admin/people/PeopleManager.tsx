@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { mobileInput } from "@/lib/phone";
 import Icon from "../../Icon";
-import type { StaffRole } from "@/lib/db";
-import type { PersonRow } from "@/lib/people";
+import type { StaffRole } from "@/lib/types";
+import type { PersonRow } from "@/lib/services/people";
 
 const ROLE_NAMES: Record<StaffRole, string> = { host: "Host", receptionist: "Reception", security: "Security", admin: "Admin" };
 const ROLES: StaffRole[] = ["host", "receptionist", "security", "admin"];

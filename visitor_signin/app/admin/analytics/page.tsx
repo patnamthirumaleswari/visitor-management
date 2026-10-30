@@ -11,7 +11,7 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
   const staff = await requireStaffPage(ACCESS.reports, "/admin/analytics");
   const asked = Number((await searchParams).days);
   const days: Range = RANGES.includes(asked as Range) ? (asked as Range) : 7;
-  const a = getAnalytics(days);
+  const a = await getAnalytics(days);
 
   return (
     <StaffShell staff={staff}>

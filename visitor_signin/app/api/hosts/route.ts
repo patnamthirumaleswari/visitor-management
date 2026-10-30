@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { read } from "@/lib/db";
-import { isActiveHost } from "@/lib/people";
+import { listHosts } from "@/lib/repos/hosts";
+import { isActiveHost } from "@/lib/services/people";
 import { getSignInSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +13,9 @@ export async function GET(req: NextRequest) {
   }
 
   const q = (req.nextUrl.searchParams.get("q") ?? "").trim().toLowerCase();
-  const hosts = read((d) =>
-    d.hosts
+  const hosts = (await listHosts())
       .filter((h) => isActiveHost(h) && (!q || h.name.toLowerCase().includes(q)))
       .slice(0, 10)
-      .map(({ id, name, department }) => ({ id, name, department })),
-  );
+      .map(({ id, name, department }) => ({ id, name, department }));
   return NextResponse.json({ hosts });
 }

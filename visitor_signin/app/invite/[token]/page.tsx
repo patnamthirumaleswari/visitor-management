@@ -1,8 +1,8 @@
-import { getBranding } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import { notFound } from "next/navigation";
 import { LOCATION } from "@/lib/config";
 import { formatDay, todayAtLocation } from "@/lib/dates";
-import { read } from "@/lib/db";
+import { findInvitationByToken } from "@/lib/repos/invitations";
 import SaveInvite from "./SaveInvite";
 
 export const dynamic = "force-dynamic";
@@ -12,17 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
-  const data = read((d) => {
-    const invitation = d.invitations.find((i) => i.qrToken === token);
-    const visit = invitation && d.visits.find((v) => v.id === invitation.visitId);
-    if (!invitation || !visit) return null;
-    return {
-      invitation,
-      visit,
-      visitor: d.visitors.find((p) => p.id === visit.visitorId),
-      host: d.hosts.find((h) => h.id === visit.hostId),
-    };
-  });
+  const data = await findInvitationByToken(token);
   if (!data) notFound();
 
   const { invitation, visit, visitor, host } = data;
@@ -34,7 +24,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   return (
     <main className="phone">
       <div className="card stack">
-        <p className="muted small">{getBranding().companyName} · {LOCATION.name}</p>
+        <p className="muted small">{(await getBranding()).companyName} · {LOCATION.name}</p>
         {used ? (
           <>
             <h1>You're all set</h1>

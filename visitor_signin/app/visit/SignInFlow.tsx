@@ -6,7 +6,7 @@ import type { ResolvedBranding } from "@/lib/branding";
 import type { BriefingView } from "@/lib/safety";
 import SafetyBriefingView from "../SafetyBriefingView";
 import type { AGREEMENT, LOCATION } from "@/lib/config";
-import type { FieldMode, Question, StandardField, VisitorType } from "@/lib/db";
+import type { FieldMode, Question, StandardField, VisitorType } from "@/lib/types";
 import { BADGE_STORAGE_KEY, INVITE_STORAGE_KEY } from "@/lib/storageKeys";
 import Icon from "../Icon";
 import Logo from "../Logo";

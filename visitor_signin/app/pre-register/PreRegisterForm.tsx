@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { mobileInput } from "@/lib/phone";
-import type { VisitorType } from "@/lib/db";
+import type { VisitorType } from "@/lib/types";
 import { formatDay } from "@/lib/dates";
 
 type HostOption = { id: string; name: string; department: string };

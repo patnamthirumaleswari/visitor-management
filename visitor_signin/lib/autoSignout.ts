@@ -1,19 +1,21 @@
 import { LOCATION } from "./config";
-import { read, write, type EmployeeVisit, type Visit } from "./db";
-import { getSettings } from "./settings";
+import type { EmployeeVisit, Visit } from "./types";
+import { listOpenEmployeeVisits, signOutEmployeeVisit } from "./repos/employeeVisits";
+import { changeVisit, findVisits, OPEN_STATUSES } from "./repos/visits";
+import { getSettings } from "./services/settings";
 
 // Automatic end-of-day sign-out (FR-KIO-10). Anyone still signed in when the sign-out time (Settings) passes,
 // visitor or employee (FR-EMP-01), is signed out, with the sign-out time set to that cut-off
 // rather than to when we noticed.
 //
 // There is no scheduler in this prototype, so the check runs whenever the reception screen or a staff
-// page asks for data (the reception screen does that every 30 s). In production run sweepAutoSignOut()
+// page asks for data (the reception screen does that every 30 s). In production run await sweepAutoSignOut()
 // from a cron job instead.
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** The first cut-off time after the visitor signed in, in the location's time zone. */
-export function autoSignOutTime(signedInAt: string, time = getSettings().autoSignoutTime): Date | null {
+export function autoSignOutTime(signedInAt: string, time: string | null): Date | null {
   if (!time) return null;
   const [hours, minutes] = time.split(":").map(Number);
   const signedIn = new Date(signedInAt);
@@ -53,31 +55,27 @@ function isEmployeeDue(visit: EmployeeVisit, now: number, time: string | null) {
 }
 
 /** Signs out everyone whose cut-off has passed. Returns how many were signed out. */
-export function sweepAutoSignOut(): number {
+export async function sweepAutoSignOut(): Promise<number> {
   const now = Date.now();
-  const time = getSettings().autoSignoutTime;
+  const time = (await getSettings()).autoSignoutTime;
   if (!time) return 0;
-  // Look first without writing, so the frequent calls don't rewrite the file every time.
-  if (!read((d) => d.visits.some((v) => isDue(v, now, time)) || d.employeeVisits.some((v) => isEmployeeDue(v, now, time)))) return 0;
+  let count = 0;
 
-  return write((d) => {
-    let count = 0;
-    for (const visit of d.visits) {
-      if (!isDue(visit, now, time)) continue;
-      const start = startOf(visit)!; // read before the status changes: it decides which time is used
-      visit.status = "signed_out";
-      visit.signedOutAt = autoSignOutTime(start, time)!.toISOString();
-      visit.signedOutBy = "auto";
-      count++;
-    }
-    for (const visit of d.employeeVisits) {
-      if (!isEmployeeDue(visit, now, time)) continue;
-      visit.signedOutAt = autoSignOutTime(visit.signedInAt, time)!.toISOString();
-      visit.signedOutBy = "auto";
-      count++;
-    }
-    return count;
-  });
+  for (const visit of (await findVisits({ status: { in: OPEN_STATUSES } })).filter((v) => isDue(v, now, time))) {
+    const done = await changeVisit(visit.id, (v) => {
+      if (!isDue(v, now, time)) return false; // changed in the meantime
+      const start = startOf(v)!; // read before the status changes: it decides which time is used
+      v.status = "signed_out";
+      v.signedOutAt = autoSignOutTime(start, time)!.toISOString();
+      v.signedOutBy = "auto";
+      return true;
+    });
+    if (done) count++;
+  }
+  for (const { visit } of (await listOpenEmployeeVisits()).filter(({ visit }) => isEmployeeDue(visit, now, time))) {
+    if (await signOutEmployeeVisit(visit.id, autoSignOutTime(visit.signedInAt, time)!, "auto")) count++;
+  }
+  return count;
 }
 
 /** Minutes the location's time zone is ahead of UTC at that moment, e.g. 330 for India. */

@@ -1,8 +1,9 @@
 import { LOCATION } from "./config";
-import { read, type Branding } from "./db";
+import type { Branding } from "./types";
 
 // Company branding: logo, main colour, company name and the reception welcome text
 // (FR-KIO-03, FR-BAD-02, FR-ADM-06). Admins change it on /admin/branding; until then these defaults apply.
+// Loading and saving it is in lib/services/branding.ts.
 
 export type ResolvedBranding = {
   companyName: string;
@@ -18,8 +19,8 @@ export const DEFAULT_BRANDING = {
   primaryColor: "#4f46e5", // indigo, from the Visitor Connect design
 };
 
-export function getBranding(): ResolvedBranding {
-  const saved: Branding = read((d) => d.branding ?? {});
+/** What's saved, with the defaults filled in. */
+export function resolveBranding(saved: Branding): ResolvedBranding {
   const primaryColor = isHexColor(saved.primaryColor) ? saved.primaryColor.toLowerCase() : DEFAULT_BRANDING.primaryColor;
   return {
     companyName: saved.companyName?.trim() || DEFAULT_BRANDING.companyName,

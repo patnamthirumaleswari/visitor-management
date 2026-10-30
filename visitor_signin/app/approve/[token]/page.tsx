@@ -2,32 +2,27 @@ import DecisionButtons from "../../DecisionButtons";
 import Icon from "../../Icon";
 import Logo from "../../Logo";
 import { minutesSince } from "@/lib/approvals";
-import { getBranding } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import { LOCATION } from "@/lib/config";
-import { read } from "@/lib/db";
+import { findVisitWithPeople } from "@/lib/repos/visits";
 import { readToken } from "@/lib/token";
 import { typeDisplay } from "@/lib/visitorTypes";
+import { listVisitorTypes } from "@/lib/services/visitorTypes";
 
 export const dynamic = "force-dynamic";
 
 // The page the Approve / Deny link in the host's email or SMS opens: who is waiting, and one tap to answer.
 export default async function ApprovePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const brand = getBranding();
+  const brand = await getBranding();
+  const types = await listVisitorTypes();
   const payload = readToken(token, "decision");
   const [visitId, hostId] = payload?.d.split(":") ?? [];
 
   const data = payload
-    ? read((d) => {
-        const visit = d.visits.find((v) => v.id === visitId && v.hostId === hostId);
-        if (!visit) return null;
-        return {
-          visit,
-          visitor: d.visitors.find((p) => p.id === visit.visitorId),
-          host: d.hosts.find((h) => h.id === hostId),
-          type: typeDisplay(d, visit.visitorType),
-        };
-      })
+    ? await findVisitWithPeople(visitId).then((found) =>
+        found && found.visit.hostId === hostId ? { ...found, type: typeDisplay(types, found.visit.visitorType) } : null,
+      )
     : null;
 
   return (

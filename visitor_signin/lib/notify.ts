@@ -1,15 +1,17 @@
-import { newId, read, write, type Host, type Notification, type NotificationChannel, type Visit, type Visitor } from "./db";
+import type { Host, Notification, NotificationChannel, Visit, Visitor } from "./types";
+import { insertNotification } from "./repos/notifications";
 import { escapeHtml, sendEmail, sendSms, type SendResult } from "./channels";
 import { LOCATION } from "./config";
 import { publicBaseUrl } from "./baseUrl";
-import { getSettings } from "./settings";
+import { getSettings } from "./services/settings";
 import { formatDay } from "./dates";
 import { makeToken } from "./token";
-import { getBranding } from "./branding";
+import { getBranding } from "./services/branding";
+import { listVisitorTypes } from "./services/visitorTypes";
 import { typeDisplay } from "./visitorTypes";
 
 /** The company name from /admin/branding, so emails match the reception screen and badge. */
-const companyName = () => getBranding().companyName;
+const companyName = async () => (await getBranding()).companyName;
 
 /**
  * Tells the host their visitor has arrived (FR-NOT-01/02), by email, SMS or both,
@@ -17,9 +19,10 @@ const companyName = () => getBranding().companyName;
  * Call it after the sign-in response is sent (next/server `after`), so the visitor never waits.
  */
 export async function notifyHost(host: Host, visitor: Visitor, visit: Visit) {
+  const company = await companyName();
   const channels: NotificationChannel[] = host.notifyBy?.length ? host.notifyBy : ["email"];
   const who = `${visitor.name}${visitor.company ? ` (${visitor.company})` : ""}`;
-  const type = read((d) => typeDisplay(d, visit.visitorType).label);
+  const type = typeDisplay(await listVisitorTypes(), visit.visitorType).label;
   // The visitor type's questions and answers (FR-KIO-05), e.g. "What work are you doing today?"
   const answers: Array<[string, string]> = (visit.answers ?? []).map((a) => [a.label, a.value]);
   const time = new Date(visit.signedInAt ?? Date.now()).toLocaleTimeString("en-IN", {
@@ -52,7 +55,7 @@ export async function notifyHost(host: Host, visitor: Visitor, visit: Visit) {
             `Location: ${LOCATION.name}, ${LOCATION.address}`,
             ...answers.map(([q, a]) => `${q} ${a}`),
           ].join("\n"),
-          html: emailLayout(`
+          html: emailLayout(company, `
             <h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} has arrived</h2>
             ${photo ? `<img src="cid:${photo.contentId}" alt="" width="120" height="120" style="border-radius:50%;object-fit:cover;display:block;margin:0 0 16px">` : ""}
             ${detailsTable([
@@ -84,10 +87,12 @@ export function decisionLink(visit: Visit): string {
  * details and an Approve / Deny link, by email, SMS or both as they chose (FR-NOT-06).
  */
 export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Visit) {
+  const company = await companyName();
   const channels: NotificationChannel[] = host.notifyBy?.length ? host.notifyBy : ["email"];
   const who = `${visitor.name}${visitor.company ? ` (${visitor.company})` : ""}`;
-  const type = read((d) => typeDisplay(d, visit.visitorType).label);
+  const type = typeDisplay(await listVisitorTypes(), visit.visitorType).label;
   const link = decisionLink(visit);
+  const { escalateMinutes } = await getSettings();
   const answers: Array<[string, string]> = (visit.answers ?? []).map((a) => [a.label, a.value]);
   const record = { kind: "approval", visitId: visit.id, hostId: host.id } as const;
 
@@ -112,16 +117,16 @@ export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Vi
             ...answers.map(([q, a]) => `${q} ${a}`),
             "",
             `Approve or deny entry: ${link}`,
-            `If you don't answer within ${getSettings().escalateMinutes} minutes, reception is told.`,
+            `If you don't answer within ${escalateMinutes} minutes, reception is told.`,
           ].join("\n"),
-          html: emailLayout(`
+          html: emailLayout(company, `
             <h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} is waiting at reception</h2>
             ${photo ? `<img src="cid:${photo.contentId}" alt="" width="120" height="120" style="border-radius:30%;object-fit:cover;display:block;margin:0 0 16px">` : ""}
             ${detailsTable([["Visitor", who], ["Type", type], ["Phone", visitor.phone], ["Visitor no.", String(visit.no ?? "")], ...answers])}
             <p style="margin:20px 0">
               <a href="${escapeHtml(link)}" style="background:#059669;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700">Approve or deny</a>
             </p>
-            <p style="margin:0;color:#6b7280">If you don't answer within ${getSettings().escalateMinutes} minutes, reception is told.</p>`),
+            <p style="margin:0;color:#6b7280">If you don't answer within ${escalateMinutes} minutes, reception is told.</p>`),
           inlineImage: photo,
         }),
       );
@@ -131,6 +136,7 @@ export async function notifyHostApproval(host: Host, visitor: Visitor, visit: Vi
 
 /** The visitor wants to leave: the host confirms the visit is finished (or says "not yet"). */
 export async function notifyHostCheckout(host: Host, visitor: Visitor, visit: Visit) {
+  const company = await companyName();
   const channels: NotificationChannel[] = host.notifyBy?.length ? host.notifyBy : ["email"];
   const link = decisionLink(visit);
   const text = `${visitor.name} (visitor no. ${visit.no ?? ""}) wants to check out. Confirm their visit is finished: ${link}`;
@@ -144,7 +150,7 @@ export async function notifyHostCheckout(host: Host, visitor: Visitor, visit: Vi
               to: host.email,
               subject: `${visitor.name} wants to check out`,
               text,
-              html: emailLayout(`
+              html: emailLayout(company, `
                 <h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} wants to check out</h2>
                 <p>Confirm their visit is finished, and security will let them out at the gate.</p>
                 <p style="margin:20px 0"><a href="${escapeHtml(link)}" style="background:#059669;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:700">Confirm checkout</a></p>`),
@@ -156,6 +162,7 @@ export async function notifyHostCheckout(host: Host, visitor: Visitor, visit: Vi
 
 /** Security is holding the visitor at the gate: tell the host so they (or an admin) can clear it. */
 export async function notifyHostHold(host: Host, visitor: Visitor, visit: Visit) {
+  const company = await companyName();
   const reason = visit.hold?.reason ?? "";
   const text = `${visitor.name} (visitor no. ${visit.no ?? ""}) is held at the gate by security: ${reason}. Sign in to Visitor Connect to clear the hold.`;
   return deliver({ kind: "hold", visitId: visit.id, hostId: host.id, channel: "email", to: host.email }, () =>
@@ -163,13 +170,14 @@ export async function notifyHostHold(host: Host, visitor: Visitor, visit: Visit)
       to: host.email,
       subject: `${visitor.name} is held at the gate`,
       text,
-      html: emailLayout(`<h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} is held at the gate</h2><p>${escapeHtml(text)}</p>`),
+      html: emailLayout(company, `<h2 style="margin:0 0 12px">${escapeHtml(visitor.name)} is held at the gate</h2><p>${escapeHtml(text)}</p>`),
     }),
   );
 }
 
 /** Watchlist match at check-in: tell admins (via RECEPTION_EMAIL), not the host. */
 export async function notifyWatchlistMatch(visitor: Visitor, visit: Visit) {
+  const company = await companyName();
   const to = process.env.RECEPTION_EMAIL?.trim() || "admins (RECEPTION_EMAIL not set)";
   const text = `Watchlist match: ${visitor.name} (visitor no. ${visit.no ?? ""}) has checked in and is waiting for an admin. Reason on the list: ${visit.watch?.reason ?? ""}. Sign in as an admin to approve or deny.`;
   return deliver({ kind: "watchlist", visitId: visit.id, channel: "email", to }, () =>
@@ -177,22 +185,24 @@ export async function notifyWatchlistMatch(visitor: Visitor, visit: Visit) {
       to: process.env.RECEPTION_EMAIL?.trim() || "reception@localhost",
       subject: `Watchlist match: ${visitor.name} needs an admin's decision`,
       text,
-      html: emailLayout(`<h2 style="margin:0 0 12px">Watchlist match: ${escapeHtml(visitor.name)}</h2><p>${escapeHtml(text)}</p>`),
+      html: emailLayout(company, `<h2 style="margin:0 0 12px">Watchlist match: ${escapeHtml(visitor.name)}</h2><p>${escapeHtml(text)}</p>`),
     }),
   );
 }
 
 /** Nobody answered in time: tell reception (RECEPTION_EMAIL in .env.local), or log it. */
 export async function notifyReceptionEscalated(visit: Visit, visitorName: string, hostName: string) {
+  const company = await companyName();
   const to = process.env.RECEPTION_EMAIL?.trim() || "reception (RECEPTION_EMAIL not set)";
   const what = visit.status === "checkout" ? "confirm their checkout" : "approve entry";
-  const text = `${visitorName} (visitor no. ${visit.no ?? ""}) has waited ${getSettings().escalateMinutes}+ minutes for ${hostName} to ${what}. Answer here: ${decisionLink(visit)}`;
+  const { escalateMinutes } = await getSettings();
+  const text = `${visitorName} (visitor no. ${visit.no ?? ""}) has waited ${escalateMinutes}+ minutes for ${hostName} to ${what}. Answer here: ${decisionLink(visit)}`;
   return deliver({ kind: "escalation", visitId: visit.id, channel: "email", to }, () =>
     sendEmail({
       to: process.env.RECEPTION_EMAIL?.trim() || "reception@localhost",
       subject: `Escalated: ${visitorName} is still waiting`,
       text,
-      html: emailLayout(`<h2 style="margin:0 0 12px">${escapeHtml(visitorName)} is still waiting</h2><p>${escapeHtml(text)}</p>`),
+      html: emailLayout(company, `<h2 style="margin:0 0 12px">${escapeHtml(visitorName)} is still waiting</h2><p>${escapeHtml(text)}</p>`),
     }),
   );
 }
@@ -202,23 +212,24 @@ export async function notifyReceptionEscalated(visit: Visit, visitorName: string
  * the address and a map link. By email when they gave one, otherwise by SMS.
  */
 export async function notifyVisitorInvited(visitor: Visitor, host: Host, visit: Visit, inviteUrl: string) {
+  const company = await companyName();
   const day = visit.expectedDate ? formatDay(visit.expectedDate) : "your visit day";
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(LOCATION.address)}`;
   const record = { kind: "invitation", visitId: visit.id } as const;
 
   if (!visitor.email) {
-    const text = `${host.name} has invited you to ${companyName()}, ${LOCATION.name} on ${day}. Open your invite: ${inviteUrl}`;
+    const text = `${host.name} has invited you to ${company}, ${LOCATION.name} on ${day}. Open your invite: ${inviteUrl}`;
     return deliver({ ...record, channel: "sms", to: visitor.phone }, () => sendSms(visitor.phone, text));
   }
 
   return deliver({ ...record, channel: "email", to: visitor.email }, () =>
     sendEmail({
       to: visitor.email,
-      subject: `You're invited to ${companyName()} on ${day}`,
+      subject: `You're invited to ${company} on ${day}`,
       text: [
         `Hi ${visitor.name},`,
         "",
-        `${host.name} has invited you to ${companyName()}, ${LOCATION.name} on ${day}.`,
+        `${host.name} has invited you to ${company}, ${LOCATION.name} on ${day}.`,
         "",
         `Your invitation: ${inviteUrl}`,
         `Address: ${LOCATION.address}`,
@@ -226,9 +237,9 @@ export async function notifyVisitorInvited(visitor: Visitor, host: Host, visit: 
         "",
         "When you arrive, scan the QR code on the screen at reception with your phone. You won't need to fill in a form.",
       ].join("\n"),
-      html: emailLayout(`
+      html: emailLayout(company, `
         <h2 style="margin:0 0 12px">You're invited, ${escapeHtml(visitor.name)}</h2>
-        <p style="margin:0 0 16px">${escapeHtml(host.name)} has invited you to ${escapeHtml(companyName())}.</p>
+        <p style="margin:0 0 16px">${escapeHtml(host.name)} has invited you to ${escapeHtml(company)}.</p>
         ${detailsTable([
           ["Date", day],
           ["Host", host.name],
@@ -243,7 +254,7 @@ export async function notifyVisitorInvited(visitor: Visitor, host: Host, visit: 
   );
 }
 
-/** Sends one message and records the result, including failures, in db.json. Never throws. */
+/** Sends one message and records the result, including failures, in the database. Never throws. */
 async function deliver(
   record: Pick<Notification, "kind" | "visitId" | "hostId" | "channel" | "to">,
   send: () => Promise<SendResult>,
@@ -258,15 +269,15 @@ async function deliver(
     console.error(`[notify] ${record.channel} to ${record.to} failed:`, error);
   }
 
-  write((d) => {
-    d.notifications.push({ id: newId(), ...record, status, ...(error ? { error } : {}), sentAt: new Date().toISOString() });
-  });
+  await insertNotification({ ...record, status, ...(error ? { error } : {}), sentAt: new Date().toISOString() }).catch((e) =>
+    console.error("[notify] could not record the notification", e),
+  );
 }
 
-function emailLayout(body: string) {
+function emailLayout(company: string, body: string) {
   return `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px;line-height:1.5;color:#111827;max-width:520px;margin:0 auto;padding:24px">
 ${body}
-<p style="margin:24px 0 0;font-size:13px;color:#6b7280">${escapeHtml(companyName())} · Visitor Management</p>
+<p style="margin:24px 0 0;font-size:13px;color:#6b7280">${escapeHtml(company)} · Visitor Management</p>
 </div>`;
 }
 

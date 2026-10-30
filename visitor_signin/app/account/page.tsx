@@ -3,8 +3,8 @@ import StaffShell from "../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
 import { sweepAutoSignOut } from "@/lib/autoSignout";
 import { EMPLOYEE_QR_PREFIX, LOCATION } from "@/lib/config";
-import { read } from "@/lib/db";
-import { openEmployeeVisit } from "@/lib/employees";
+import { findOpenEmployeeVisit } from "@/lib/repos/employeeVisits";
+import { findHostById } from "@/lib/repos/hosts";
 import NotificationSettings from "./NotificationSettings";
 import ReceptionSignIn from "./ReceptionSignIn";
 
@@ -18,13 +18,9 @@ function PasswordLink() {
 // and their PIN and personal QR for signing in at reception (FR-EMP-01).
 export default async function AccountPage() {
   const staff = await requireStaffPage(ACCESS.account, "/account");
-  sweepAutoSignOut(); // don't show "signed in since" for yesterday's forgotten sign-out
-  const found = staff.hostId
-    ? read((d) => {
-        const host = d.hosts.find((h) => h.id === staff.hostId);
-        return host ? { host, open: openEmployeeVisit(d, host.id) } : undefined;
-      })
-    : undefined;
+  await sweepAutoSignOut(); // don't show "signed in since" for yesterday's forgotten sign-out
+  const employee = staff.hostId ? await findHostById(staff.hostId) : null;
+  const found = employee ? { host: employee, open: await findOpenEmployeeVisit(employee.id) } : undefined;
 
   if (!found) {
     return (

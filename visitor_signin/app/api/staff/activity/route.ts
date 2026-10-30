@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { activityFor } from "@/lib/activity";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { checkEscalations } from "@/lib/requests";
+import { checkEscalations } from "@/lib/services/requests";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const staff = await requireStaffApi(ACCESS.decide);
   if (staff instanceof NextResponse) return staff;
 
-  checkEscalations();
+  await checkEscalations();
   const days = req.nextUrl.searchParams.get("days") === "7" ? 7 : 1;
-  return NextResponse.json({ items: activityFor(staff, days) });
+  return NextResponse.json({ items: await activityFor(staff, days) });
 }

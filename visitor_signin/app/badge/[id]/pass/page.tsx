@@ -17,7 +17,7 @@ export default async function VisitorPassPage({
 }) {
   const { id } = await params;
   const { t } = await searchParams;
-  const pass = t ? loadPass(id, t) : null;
+  const pass = t ? await loadPass(id, t) : null;
   if (!pass) notFound();
 
   return (

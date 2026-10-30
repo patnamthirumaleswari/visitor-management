@@ -1,11 +1,10 @@
-import crypto from "node:crypto";
-import { FIRST_VISIT_NO, LOCATION } from "./config";
-import { getSettings } from "./settings";
-import { read, write, type Data, type Visit, type VisitorType } from "./db";
+import { LOCATION } from "./config";
+import type { Visit, VisitorType } from "./types";
 import type { Staff } from "./auth";
 
 // Host approval (Visitor Connect): a walk-in waits at reception until their host approves entry.
 // Admins and reception can also decide, and step in when a host doesn't answer in time.
+// These are the rules only: they change a Visit object, and lib/repos/visits.ts saves it.
 
 /** On site: approved and inside, including while checking out or at the gate. */
 export const ON_SITE: Visit["status"][] = ["signed_in", "checkout", "gate", "hold"];
@@ -21,17 +20,6 @@ export function addEvent(visit: Visit, event: string, by: string, at = new Date(
   (visit.timeline ??= []).push({ at, event, by });
 }
 
-/** The next visitor number, and a 4-digit code no other open visit is using. Runs inside write(). */
-export function newNumberAndCode(d: Data): { no: number; code: string } {
-  const no = Math.max(d.counters?.visitNo ?? FIRST_VISIT_NO - 1, FIRST_VISIT_NO - 1) + 1;
-  d.counters = { ...d.counters, visitNo: no };
-  const used = new Set(d.visits.filter(isOpen).map((v) => v.code));
-  let code: string;
-  do code = String(crypto.randomInt(1000, 10000));
-  while (used.has(code));
-  return { no, code };
-}
-
 /** Hosts decide for their own visitors (entry and checkout); admins and reception for anyone. */
 export function canDecide(staff: Staff, visit: Visit): boolean {
   if (visit.status === "review") return staff.role === "admin"; // watchlist match: admins only
@@ -45,7 +33,7 @@ export type Decision = "approve" | "deny";
 /**
  * Answers whatever the visit is waiting for: entry (approve / deny) or checkout (approve = cleared
  * for the gate, deny = "not yet", the visitor stays). Returns an error message if it was already
- * answered. Runs inside write().
+ * answered.
  */
 export function decide(visit: Visit, decision: Decision, by: string, note = ""): string | null {
   if (visit.status === "checkout") return decideCheckout(visit, decision, by, note);
@@ -80,12 +68,12 @@ const dayAtLocation = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZo
  * Whether a denied visit can still be approved: denied today (they may still be at reception), and the
  * visitor hasn't checked in again since (then the newer request is the one to answer).
  */
-export function reapproveProblem(d: Data, visit: Visit): string | null {
+export function reapproveProblem(visit: Visit, checkedInAgain: boolean): string | null {
   if (visit.status !== "denied") return "Only a visit that wasn't approved can be approved after all.";
   if (!visit.decidedAt || dayAtLocation(visit.decidedAt) !== dayAtLocation(new Date().toISOString())) {
     return "This was not approved on an earlier day. Ask them to check in again.";
   }
-  if (d.visits.some((v) => v.id !== visit.id && v.visitorId === visit.visitorId && isOpen(v))) {
+  if (checkedInAgain) {
     return "They have checked in again. Answer their newer request instead.";
   }
   return null;
@@ -95,9 +83,9 @@ export function reapproveProblem(d: Data, visit: Visit): string | null {
 export const canReapprove = (staff: Staff, visit: Visit) =>
   visit.status === "denied" && (staff.role === "admin" || staff.role === "receptionist" || (staff.role === "host" && staff.hostId === visit.hostId));
 
-/** Lets a denied visitor in after all. Runs inside write(). */
-export function reapprove(d: Data, visit: Visit, by: string): string | null {
-  const problem = reapproveProblem(d, visit);
+/** Lets a denied visitor in after all. `checkedInAgain`: the visitor has a newer open visit. */
+export function reapprove(visit: Visit, by: string, checkedInAgain: boolean): string | null {
+  const problem = reapproveProblem(visit, checkedInAgain);
   if (problem) return problem;
   const now = new Date().toISOString();
   visit.status = "signed_in";
@@ -179,34 +167,6 @@ export function clearHold(visit: Visit, by: string, note = ""): string | null {
   delete visit.hold;
   addEvent(visit, `Hold cleared${note ? `: ${note.slice(0, 200)}` : ""}: security may release`, by);
   return null;
-}
-
-/**
- * Requests nobody answered within the escalation time (Settings) get marked escalated, so they stand out on the
- * staff screens. Returns the newly escalated visits, so the caller can tell reception.
- * There's no scheduler in this prototype: it runs when staff screens or the reception screen load data.
- */
-export function sweepEscalations(): Visit[] {
-  const escalateMinutes = getSettings().escalateMinutes;
-  const late = (iso: string | undefined, now: number) => !!iso && now - new Date(iso).getTime() >= escalateMinutes * 60_000;
-  const due = (v: Visit, now: number) =>
-    (v.status === "pending" && !v.escalated && late(v.checkedInAt, now)) ||
-    (v.status === "checkout" && !v.checkoutEscalated && late(v.checkoutRequestedAt, now));
-  const now = Date.now();
-  if (!read((d) => d.visits.some((v) => due(v, now)))) return [];
-  return write((d) => {
-    const hit = d.visits.filter((v) => due(v, now));
-    for (const v of hit) {
-      if (v.status === "checkout") {
-        v.checkoutEscalated = true;
-        addEvent(v, `Checkout not answered in ${escalateMinutes} min: reception told`, "System");
-      } else {
-        v.escalated = true;
-        addEvent(v, `No reply from host in ${escalateMinutes} min: reception told`, "System");
-      }
-    }
-    return hit.map((v) => ({ ...v }));
-  });
 }
 
 /** Minutes since a time, for "waiting 3 min". */

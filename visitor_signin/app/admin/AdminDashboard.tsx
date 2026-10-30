@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Icon, { type IconName } from "../Icon";
 import RequestList, { StatusPill } from "../RequestList";
-import type { RequestRow } from "@/lib/requests";
+import type { RequestRow } from "@/lib/services/requests";
 
 type OnsiteVisit = {
   id: string;

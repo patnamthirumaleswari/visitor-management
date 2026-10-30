@@ -6,7 +6,7 @@ import ClearHoldButton from "./ClearHoldButton";
 import DecisionButtons from "./DecisionButtons";
 import ReapproveButton from "./ReapproveButton";
 import Icon from "./Icon";
-import type { RequestRow } from "@/lib/requests";
+import type { RequestRow } from "@/lib/services/requests";
 
 const STATUS: Record<RequestRow["status"], { label: string; tone: string }> = {
   expected: { label: "Expected", tone: "t-info" },

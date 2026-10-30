@@ -6,10 +6,10 @@ import { NavLink, SignOutButton } from "./StaffNav";
 import type { IconName } from "./Icon";
 import Icon from "./Icon";
 import { ROLE_LABELS, type Staff } from "@/lib/auth";
-import { getBranding } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import { LOCATION } from "@/lib/config";
-import { read, type StaffRole } from "@/lib/db";
-import { unreadCount } from "@/lib/inbox";
+import type { StaffRole } from "@/lib/types";
+import { unreadCount } from "@/lib/services/inbox";
 
 type NavItem = { href: string; label: string; short: string; icon: IconName; roles: StaffRole[] };
 
@@ -32,10 +32,10 @@ const NAV: NavItem[] = [
   { href: "/account", label: "My account", short: "Account", icon: "user", roles: ["admin", "receptionist", "host", "security"] },
 ];
 
-export default function StaffShell({ staff, children }: { staff: Staff; children: React.ReactNode }) {
-  const brand = getBranding();
+export default async function StaffShell({ staff, children }: { staff: Staff; children: React.ReactNode }) {
+  const brand = await getBranding();
   const nav = NAV.filter((n) => n.roles.includes(staff.role));
-  const unread = nav.some((n) => n.href === "/inbox") ? read((d) => unreadCount(d, staff)) : 0;
+  const unread = nav.some((n) => n.href === "/inbox") ? await unreadCount(staff) : 0;
   const badge = (href: string) => (href === "/inbox" && unread > 0 ? <span className="count-badge" aria-label={`${unread} unread`}>{unread}</span> : null);
   const initials = staff.name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 

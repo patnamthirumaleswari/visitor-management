@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { getBranding } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,9 +14,9 @@ export const viewport: Viewport = {
   themeColor: "#4F46E5",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // The brand colour from /admin/branding replaces the default indigo on every page (FR-ADM-06).
-  const { primaryColor, primaryText } = getBranding();
+  const { primaryColor, primaryText } = await getBranding();
   return (
     <html lang="en">
       <head>

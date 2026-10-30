@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
-import { canDecide, decide, type Decision } from "@/lib/approvals";
-import { ACCESS, ROLE_LABELS, requireStaffApi } from "@/lib/auth";
-import { write } from "@/lib/db";
+import type { Decision } from "@/lib/approvals";
+import { ACCESS, requireStaffApi } from "@/lib/auth";
+import { auditVisit } from "@/lib/services/audit";
+import { decideAsStaff } from "@/lib/services/visitActions";
 
 export const dynamic = "force-dynamic";
 
@@ -19,25 +19,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!decision) return NextResponse.json({ error: "Choose approve or deny." }, { status: 400 });
   const note = typeof body.note === "string" ? body.note.trim() : "";
 
-  const result = write((d) => {
-    const visit = d.visits.find((v) => v.id === id);
-    if (!visit) return { error: "Visit not found.", status: 404 };
-    if (visit.status === "review" && !canDecide(staff, visit)) {
-      return { error: "Only an admin can answer this one.", status: 403 }; // watchlist match
-    }
-    if ((visit.status === "pending" || visit.status === "checkout") && !canDecide(staff, visit)) {
-      return { error: "Only this visitor's host, reception or an admin can answer.", status: 403 };
-    }
-    const by = staff.role === "host" ? staff.name : `${staff.name} (${ROLE_LABELS[staff.role]})`;
-    const problem = decide(visit, decision, by, note);
-    if (problem) return { error: problem, status: 409 };
-    return { visitStatus: visit.status };
-  });
-
+  const result = await decideAsStaff(id, staff, decision, note);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+
   const action = decision === "approve"
     ? (result.visitStatus === "gate" ? "Checkout approved" : "Entry approved")
     : (result.visitStatus === "denied" ? "Entry not approved" : "Checkout declined");
-  auditVisit(req, staff, action, id, note ? `Note: ${note}` : "");
+  await auditVisit(req, staff, action, id, note ? `Note: ${note}` : "");
   return NextResponse.json({ status: result.visitStatus });
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Icon from "../../Icon";
-import type { AuditEntry } from "@/lib/audit";
+import type { AuditEntry } from "@/lib/services/audit";
 import { LOCATION } from "@/lib/config";
 
 const PAGE = 100; // rows shown at a time

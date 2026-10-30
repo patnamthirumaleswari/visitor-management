@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { isMobile } from "@/lib/phone";
-import { normalizePhone, read } from "@/lib/db";
+import { normalizePhone } from "@/lib/types";
+import { findVisitorByPhone } from "@/lib/repos/visitors";
 import { getSignInSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,6 @@ export async function GET(req: NextRequest) {
   const phone = normalizePhone(req.nextUrl.searchParams.get("phone") ?? "");
   if (!isMobile(phone)) return NextResponse.json({ visitor: null });
 
-  const visitor = read((d) => d.visitors.find((v) => v.phone === phone));
+  const visitor = await findVisitorByPhone(phone);
   return NextResponse.json({ visitor: visitor ? { name: visitor.name, company: visitor.company } : null });
 }

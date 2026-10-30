@@ -1,8 +1,9 @@
 import { AGREEMENT, LOCATION } from "@/lib/config";
-import { getBranding } from "@/lib/branding";
-import { getBriefing, toView } from "@/lib/safety";
+import { getBranding } from "@/lib/services/branding";
+import { toView } from "@/lib/safety";
+import { getBriefing } from "@/lib/services/safety";
 import { getSignInSession } from "@/lib/session";
-import { getActiveVisitorTypes } from "@/lib/visitorTypes";
+import { getActiveVisitorTypes } from "@/lib/services/visitorTypes";
 import ExistingBadgeLink from "./ExistingBadgeLink";
 import SignInFlow from "./SignInFlow";
 
@@ -28,6 +29,6 @@ export default async function VisitPage({ searchParams }: { searchParams: Promis
     );
   }
 
-  const briefing = getBriefing();
-  return <SignInFlow location={LOCATION} brand={getBranding()} briefing={briefing.enabled ? toView(briefing) : null} visitorTypes={getActiveVisitorTypes()} agreement={AGREEMENT} />;
+  const [briefing, brand, visitorTypes] = await Promise.all([getBriefing(), getBranding(), getActiveVisitorTypes()]);
+  return <SignInFlow location={LOCATION} brand={brand} briefing={briefing.enabled ? toView(briefing) : null} visitorTypes={visitorTypes} agreement={AGREEMENT} />;
 }

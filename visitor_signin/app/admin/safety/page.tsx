@@ -1,6 +1,6 @@
 import StaffShell from "../../StaffShell";
 import { ACCESS, requireStaffPage } from "@/lib/auth";
-import { getBriefing } from "@/lib/safety";
+import { getBriefing } from "@/lib/services/safety";
 import SafetyForm from "./SafetyForm";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function SafetyPage() {
   const staff = await requireStaffPage(ACCESS.safety, "/admin/safety");
   return (
     <StaffShell staff={staff}>
-      <SafetyForm initial={getBriefing()} />
+      <SafetyForm initial={await getBriefing()} />
     </StaffShell>
   );
 }

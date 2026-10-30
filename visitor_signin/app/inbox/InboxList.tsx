@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Icon, { type IconName } from "../Icon";
-import type { InboxItem } from "@/lib/inbox";
+import type { InboxItem } from "@/lib/services/inbox";
 
 const LOOK: Record<string, { icon: IconName; tone: string }> = {
   arrival: { icon: "user", tone: "r-info" },

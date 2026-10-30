@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { audit, auditVisit } from "@/lib/audit";
+import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { write, type SafetyRule } from "@/lib/db";
-import { briefingFrom, RULE_KINDS } from "@/lib/safety";
+import type { SafetyRule } from "@/lib/types";
+import { RULE_KINDS } from "@/lib/safety";
+import { saveBriefing } from "@/lib/services/safety";
 
 export const dynamic = "force-dynamic";
 
@@ -49,21 +50,9 @@ export async function PUT(req: Request) {
     exitPlan = body.exitPlan;
   }
 
-  const saved = write((d) => {
-    const current = briefingFrom(d);
-    const next = { enabled, emergencyPhone, assemblyPoint, notes, rules, exitPlan: exitPlan === undefined ? current.exitPlan : exitPlan };
-    const { enabled: _e, ...nextContent } = next;
-    const { enabled: _c, version: _v, updatedAt: _u, ...currentContent } = current;
-    const changed = JSON.stringify(nextContent) !== JSON.stringify(currentContent);
-    d.safety = {
-      ...next,
-      version: changed ? current.version + 1 : current.version,
-      updatedAt: new Date().toISOString(),
-    };
-    return d.safety;
-  });
+  const saved = await saveBriefing({ enabled, emergencyPhone, assemblyPoint, notes, rules, exitPlan });
 
-  audit(req, staff, "Safety briefing saved", `Version ${saved.version}${saved.enabled ? "" : " (switched off)"}`);
+  await audit(req, staff, "Safety briefing saved", `Version ${saved.version}${saved.enabled ? "" : " (switched off)"}`);
   return NextResponse.json({ briefing: saved });
 }
 

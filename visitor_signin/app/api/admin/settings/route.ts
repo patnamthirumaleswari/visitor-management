@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { audit } from "@/lib/audit";
+import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
-import { write } from "@/lib/db";
 import { sweepOldRecords } from "@/lib/retention";
-import { settingsFrom } from "@/lib/settings";
+import { saveSettings } from "@/lib/services/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +22,10 @@ export async function PUT(req: Request) {
     return bad("Keep records for 7 to 3650 days, or choose Keep forever.");
   }
 
-  const saved = write((d) => {
-    d.settings = { escalateMinutes, autoSignoutTime, retentionDays };
-    return settingsFrom(d);
-  });
-  audit(req, staff, "Settings saved",
+  const saved = await saveSettings({ escalateMinutes, autoSignoutTime, retentionDays });
+  await audit(req, staff, "Settings saved",
     `Escalate after ${escalateMinutes} min · auto sign-out ${autoSignoutTime || "off"} · keep records ${retentionDays ? `${retentionDays} days` : "forever"}`);
-  const deleted = sweepOldRecords(true); // a shorter retention time applies straight away
+  const deleted = await sweepOldRecords(true); // a shorter retention time applies straight away
   return NextResponse.json({ settings: saved, deleted });
 }
 

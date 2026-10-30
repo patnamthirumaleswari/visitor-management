@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getStaff, homeFor } from "@/lib/auth";
-import { getBranding } from "@/lib/branding";
+import { getBranding } from "@/lib/services/branding";
 import LoginForm from "./LoginForm";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const staff = await getStaff();
   if (staff) redirect(homeFor(staff.role)); // already logged in
 
-  const brand = getBranding();
+  const brand = await getBranding();
   const key = role && TITLES[role] ? role : "";
   const devAccounts = process.env.NODE_ENV === "production" ? [] : key ? DEV_ACCOUNTS[key] : Object.values(DEV_ACCOUNTS).flat();
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { audit } from "@/lib/audit";
+import { audit } from "@/lib/services/audit";
 import { ACCESS, requireStaffApi } from "@/lib/auth";
 import { RANGES, visitsCsv, type Range } from "@/lib/analytics";
 import { todayAtLocation } from "@/lib/dates";
@@ -13,9 +13,9 @@ export async function GET(req: Request) {
 
   const asked = Number(new URL(req.url).searchParams.get("days"));
   const days: Range = RANGES.includes(asked as Range) ? (asked as Range) : 30;
-  audit(req, staff, "Visit report downloaded", `Last ${days} days (CSV)`);
+  await audit(req, staff, "Visit report downloaded", `Last ${days} days (CSV)`);
 
-  return new NextResponse(visitsCsv(days), {
+  return new NextResponse(await visitsCsv(days), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="visits-last-${days}-days-${todayAtLocation()}.csv"`,
