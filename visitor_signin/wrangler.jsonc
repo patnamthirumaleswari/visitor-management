@@ -1,0 +1,26 @@
+// Cloudflare Workers settings for Visitor Connect (built with @opennextjs/cloudflare).
+// Secrets (APP_SECRET, DIRECT_URL, …) are NOT kept here: set them with `npx wrangler secret put NAME`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "visitor-connect",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    // Lets the app call itself (used by the adapter); the name must match "name" above.
+    { "binding": "WORKER_SELF_REFERENCE", "service": "visitor-connect" }
+  ],
+  // Password checks (scrypt) and QR codes need more CPU than the free plan's 10 ms: Workers Paid plan.
+  "limits": { "cpu_ms": 30000 },
+  "observability": { "enabled": true },
+  // Tells lib/prisma.ts it's running on Workers (one database client per request, through pg).
+  "vars": { "RUNTIME": "cloudflare" }
+
+  // Hyperdrive (faster database connections), once created with
+  // `npx wrangler hyperdrive create visitor-connect-db --connection-string="<Supabase session link>"`:
+  // "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id printed by that command>" }]
+}

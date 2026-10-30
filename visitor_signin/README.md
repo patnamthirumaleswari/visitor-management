@@ -297,6 +297,36 @@ The backend is layered (routes, then `lib/services`, then `lib/repos` with Prism
 If the phone can't load the page, allow Node through Windows Firewall on private networks, or set
 `PUBLIC_BASE_URL` in `.env.local` (see `.env.example`) if the wrong network adapter was detected.
 
+## Hosting on Cloudflare
+
+The app runs on Cloudflare Workers through the OpenNext adapter (`@opennextjs/cloudflare`), with its data in
+Supabase. Settings: `wrangler.jsonc` and `open-next.config.ts`; database connection: `lib/prisma.ts`.
+
+- Needs the **Workers Paid plan** ($5/month): password checks (scrypt) and QR codes need more than the free
+  plan's 10 ms of CPU per request.
+- On Workers each request gets its own database client (connections can't be shared there), through
+  Hyperdrive when it's set up, otherwise straight to Supabase (`DIRECT_URL`).
+- **On Windows**, the Cloudflare build needs Developer Mode (Settings, System, For developers) or an
+  Administrator PowerShell, because it creates symbolic links.
+
+Try it on your computer in Cloudflare's runtime (http://localhost:8787):
+
+```bash
+npx opennextjs-cloudflare build
+npx opennextjs-cloudflare preview
+```
+
+Deploy (first time):
+
+1. `npx wrangler login`
+2. Secrets (each command asks for the value; they're stored in Cloudflare, never in git):
+   `npx wrangler secret put APP_SECRET`, `npx wrangler secret put DIRECT_URL` (the Supabase port-5432 link),
+   `npx wrangler secret put PUBLIC_BASE_URL` (the app's address, e.g. `https://visitor-connect.<account>.workers.dev`).
+   Email and SMS keys (`SENDGRID_API_KEY`, `TWILIO_…`, `RECEPTION_EMAIL`) the same way when you have them.
+3. Optional, faster: `npx wrangler hyperdrive create visitor-connect-db --connection-string="<Supabase port-5432 link>"`,
+   then add the printed id to the `hyperdrive` block in `wrangler.jsonc`.
+4. `npm run deploy`
+
 ## Prototype shortcuts to replace before production
 
 - Notifications are sent from the web server once, with no retry. Move them to a job queue with retries.
