@@ -302,8 +302,9 @@ If the phone can't load the page, allow Node through Windows Firewall on private
 The app runs on Cloudflare Workers through the OpenNext adapter (`@opennextjs/cloudflare`), with its data in
 Supabase. Settings: `wrangler.jsonc` and `open-next.config.ts`; database connection: `lib/prisma.ts`.
 
-- Needs the **Workers Paid plan** ($5/month): password checks (scrypt) and QR codes need more than the free
-  plan's 10 ms of CPU per request.
+- **Plan:** it can run on the free plan for a demo, but password checks (scrypt) and QR codes can need more
+  than the free plan's 10 ms of CPU per request; then Cloudflare shows "Error 1102". For real use, take the
+  **Workers Paid plan** ($5/month) and add `"limits": { "cpu_ms": 30000 }` to `wrangler.jsonc`.
 - On Workers each request gets its own database client (connections can't be shared there), through
   Hyperdrive when it's set up, otherwise straight to Supabase (`DIRECT_URL`).
 - **On Windows**, the Cloudflare build needs Developer Mode (Settings, System, For developers) or an

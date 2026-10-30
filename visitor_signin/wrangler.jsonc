@@ -14,8 +14,8 @@
     // Lets the app call itself (used by the adapter); the name must match "name" above.
     { "binding": "WORKER_SELF_REFERENCE", "service": "visitor-connect" }
   ],
-  // Password checks (scrypt) and QR codes need more CPU than the free plan's 10 ms: Workers Paid plan.
-  "limits": { "cpu_ms": 30000 },
+  // On the Workers Paid plan, add "limits": { "cpu_ms": 30000 } here: password checks (scrypt) and QR codes
+  // can need more than the free plan's 10 ms of CPU per request (the free plan rejects this setting).
   "observability": { "enabled": true },
   // Tells lib/prisma.ts it's running on Workers (one database client per request, through pg).
   "vars": { "RUNTIME": "cloudflare" }
