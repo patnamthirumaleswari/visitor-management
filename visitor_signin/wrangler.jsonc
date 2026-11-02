@@ -1,27 +1,42 @@
 // Cloudflare Workers settings for Visitor Connect (built with @opennextjs/cloudflare).
 // Secrets (APP_SECRET, DIRECT_URL, …) are NOT kept here: set them with `npx wrangler secret put NAME`.
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "visitor-connect",
-  "main": ".open-next/worker.js",
-  "compatibility_date": "2026-10-01",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "services": [
-    // Lets the app call itself (used by the adapter); the name must match "name" above.
-    { "binding": "WORKER_SELF_REFERENCE", "service": "visitor-connect" }
-  ],
-  // On the Workers Paid plan, add "limits": { "cpu_ms": 30000 } here: password checks (scrypt) and QR codes
-  // can need more than the free plan's 10 ms of CPU per request (the free plan rejects this setting).
-  "observability": { "enabled": true },
-  // Tells lib/prisma.ts it's running on Workers (one database client per request, through pg).
-  "vars": { "RUNTIME": "cloudflare" },
-  // Hyperdrive keeps database connections to Supabase open, so each query doesn't start a new one
-  // (created with `npx wrangler hyperdrive create visitor-connect-db --connection-string="<Supabase 5432 link>"`).
-  // On your computer (`npm run dev`, preview) it connects straight to the database instead: set
-  // CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE in .env (see .env.example).
-  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "cdfd2510a3294314bc76407ab6343855" }]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "visitor-connect",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		// Lets the app call itself (used by the adapter); the name must match "name" above.
+		{
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "visitor-connect"
+		}
+	],
+	// On the Workers Paid plan, add "limits": { "cpu_ms": 30000 } here: password checks (scrypt) and QR codes
+	// can need more than the free plan's 10 ms of CPU per request (the free plan rejects this setting).
+	"observability": {
+		"enabled": true
+	},
+	// Tells lib/prisma.ts it's running on Workers (one database client per request, through pg).
+	"vars": {
+		"RUNTIME": "cloudflare"
+	},
+	// Hyperdrive keeps database connections to Supabase open, so each query doesn't start a new one
+	// (created with `npx wrangler hyperdrive create visitor-connect-db --connection-string="<Supabase 5432 link>"`).
+	// On your computer (`npm run dev`, preview) it connects straight to the database instead: set
+	// CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE in .env (see .env.example).
+	"hyperdrive": [
+		{
+			"binding": "HYPERDRIVE",
+			"id": "cdfd2510a3294314bc76407ab6343855"
+		}
+	]
 }
