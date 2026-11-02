@@ -324,8 +324,10 @@ Deploy (first time):
    `npx wrangler secret put APP_SECRET`, `npx wrangler secret put DIRECT_URL` (the Supabase port-5432 link),
    `npx wrangler secret put PUBLIC_BASE_URL` (the app's address, e.g. `https://visitor-connect.<account>.workers.dev`).
    Email and SMS keys (`SENDGRID_API_KEY`, `TWILIO_…`, `RECEPTION_EMAIL`) the same way when you have them.
-3. Optional, faster: `npx wrangler hyperdrive create visitor-connect-db --connection-string="<Supabase port-5432 link>"`,
-   then add the printed id to the `hyperdrive` block in `wrangler.jsonc`.
+3. Hyperdrive (already set up, id in `wrangler.jsonc`) keeps database connections open so pages load fast. A new
+   Cloudflare account creates its own with `npx wrangler hyperdrive create visitor-connect-db --connection-string="<Supabase
+   port-5432 link>"` and puts the printed id in `wrangler.jsonc`. On your computer, set
+   `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` in `.env` to the same link as `DIRECT_URL`.
 4. `npm run deploy`
 
 ## Prototype shortcuts to replace before production

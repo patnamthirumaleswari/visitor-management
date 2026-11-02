@@ -8,9 +8,9 @@
     "start": "next start -H 0.0.0.0 -p 3000",
     "typecheck": "tsc --noEmit",
     "db:import": "node scripts/import-json.mjs",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "preview": "opennextjs-cloudflare build && node --env-file-if-exists=.env node_modules/@opennextjs/cloudflare/dist/cli/index.js preview",
+    "deploy": "opennextjs-cloudflare build && node --env-file-if-exists=.env node_modules/@opennextjs/cloudflare/dist/cli/index.js deploy",
+    "upload": "opennextjs-cloudflare build && node --env-file-if-exists=.env node_modules/@opennextjs/cloudflare/dist/cli/index.js upload",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
